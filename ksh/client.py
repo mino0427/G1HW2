@@ -9,7 +9,8 @@ def request_file_from_cache(cache_host, cache_port, file_num):
         cache_conn.connect((cache_host, int(cache_port)))
         cache_conn.sendall(str(file_num).encode())
         data = cache_conn.recv(1024)
-        print(f"캐시 서버에서 수신한 응답: {data.decode()}")
+        # 캐시 서버 정보와 함께 수신한 데이터 출력
+        print(f"[{cache_host}:{cache_port}] 캐시 서버에서 수신한 응답: {data.decode()}")
 
 # 메인 클라이언트 함수
 def start_client():
