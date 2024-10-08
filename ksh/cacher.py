@@ -53,29 +53,6 @@ def handle_client(conn, addr):
             break
     conn.close()
 
-# # 메인 캐시 서버 실행
-# def start_cache_server():
-#     # 먼저 데이터 서버와 연결
-#     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as data_server_conn:
-#         data_server_conn.connect((DATA_SERVER_HOST, DATA_SERVER_PORT))
-        
-#         # 캐시 서버 소켓 설정
-#         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-#         server.bind((HOST, 0))  # 운영체제가 자동으로 사용 가능한 포트 할당
-#         cache_port = server.getsockname()[1]  # 할당받은 포트 번호 확인
-#         print(f"캐시 서버의 할당된 포트 번호: {cache_port}")
-        
-#         # 데이터 서버에 캐시 서버의 포트 번호 전송
-#         data_server_conn.sendall(str(cache_port).encode())
-        
-#         server.listen()
-#         print(f"Cache Server가 {HOST}:{cache_port}에서 실행 중입니다...")
-        
-#         while True:
-#             conn, addr = server.accept()
-#             thread = threading.Thread(target=handle_client, args=(conn, addr))
-#             thread.start()
-
 def start_cache_server():
     # 먼저 데이터 서버와 연결
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as data_server_conn:

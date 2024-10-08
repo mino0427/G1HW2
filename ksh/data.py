@@ -14,12 +14,21 @@ cache_servers = []  # 캐시 서버 정보 저장 (IP, Port)
 virtual_files = {}  # 가상 파일 저장 (파일 번호: 파일 크기)
 
 # 가상 파일 생성
+# def create_virtual_files():
+#     print("가상 파일 생성 시작...")
+#     for file_num in range(1, 100001):  # 1부터 100,000번까지 파일 생성
+#         file_size = (file_num % 10000) + 1  # 파일 크기는 1 ~ 10,000KB 반복
+#         virtual_files[file_num] = 'X' * (file_size * 1024)  # 가상 데이터 생성 (file_size KB)
+#     print(f"총 {len(virtual_files)}개의 가상 파일 생성 완료!")
+
+# 가상 파일 생성 (파일 크기만 저장)
 def create_virtual_files():
     print("가상 파일 생성 시작...")
     for file_num in range(1, 100001):  # 1부터 100,000번까지 파일 생성
         file_size = (file_num % 10000) + 1  # 파일 크기는 1 ~ 10,000KB 반복
-        virtual_files[file_num] = 'X' * (file_size * 1024)  # 가상 데이터 생성 (file_size KB)
-    print(f"총 {len(virtual_files)}개의 가상 파일 생성 완료!")
+        virtual_files[file_num] = file_size  # 가상 데이터 대신 파일 크기만 저장
+    print(f"총 {len(virtual_files)}개의 가상 파일 크기 정보 생성 완료!")
+
 
 # 파일 전송 시간 계산 및 전송 처리 함수
 def send_file(conn, file_size, speed):
@@ -61,26 +70,6 @@ def handle_cache_server(conn, addr):
 
     # 캐시 서버에 대한 추가 처리 가능
     conn.close()
-
-# # 메인 서버 실행
-# def start_server():
-#     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-#     server.bind((HOST, PORT))
-#     server.listen()
-#     print(f"Data Server가 {HOST}:{PORT}에서 실행 중입니다...")
-    
-#     # 먼저 캐시 서버와 연결
-#     for i in range(2):
-#         conn, addr = server.accept()
-#         thread = threading.Thread(target=handle_cache_server, args=(conn, addr))
-#         thread.start()
-
-#     # 이후 클라이언트와 연결
-#     while True:
-#         conn, addr = server.accept()
-#         thread = threading.Thread(target=handle_client, args=(conn, addr))
-#         thread.start()
-
 
 def start_server():
     # create_virtual_files()  # 서버가 시작되면 가상 파일 생성
