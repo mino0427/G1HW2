@@ -7,8 +7,8 @@ PORT = 5000
 MAX_CLIENTS = 4  # 클라이언트 4개 대기
 
 # 전송 속도 설정 (초당 전송되는 KB 수)
-DATA_TO_CLIENT_SPEED = 125  # 1 Mbps = 125 KB/s
-DATA_TO_CACHE_SPEED = 250   # 2 Mbps = 250 KB/s
+DATA_TO_CLIENT_SPEED = 1000  # 1 Mbps = 125 KB/s
+DATA_TO_CACHE_SPEED = 2000   # 2 Mbps = 250 KB/s
 
 cache_servers = []  # 캐시 서버 정보 저장 (IP, Port)
 virtual_files = {}  # 가상 파일 저장 (파일 번호: 파일 크기)
@@ -33,9 +33,9 @@ def create_virtual_files():
 # 파일 전송 시간 계산 및 전송 처리 함수
 def send_file(conn, file_size, speed):
     transfer_time = file_size / speed  # 전송에 필요한 시간 계산
-    print(f"전송 시간: {transfer_time}초 (파일 크기: {file_size} KB, 속도: {speed} KB/s)")
+    print(f"전송 시간: {transfer_time}초 (파일 크기: {file_size} kb, 속도: {speed} kb/s)")
     time.sleep(transfer_time)  # 전송 시간 동안 대기
-    conn.sendall(f"파일 전송 완료: {file_size} KB".encode())
+    conn.sendall(f"파일 전송 완료: {file_size} kb".encode())
 
 def handle_client(conn, addr):
     print(f"연결된 클라이언트: {addr}로부터 파일 요청 처리 시작")
@@ -53,7 +53,7 @@ def handle_client(conn, addr):
 
         # 요청한 파일을 가상 파일에서 찾음
         if file_num in virtual_files:
-            file_size = (file_num % 10000) + 1  # 파일 번호에 따른 크기 (1 ~ 10,000KB)
+            file_size = file_num #파일 사이즈는 파일번호K
             send_file(conn, file_size, DATA_TO_CLIENT_SPEED)  # 클라이언트에게 파일 전송
         else:
             print(f"데이터 서버: {file_num}번 파일을 찾을 수 없음")
@@ -68,8 +68,7 @@ def handle_cache_server(conn, addr):
     port = conn.recv(1024).decode()  # 캐시 서버의 포트 번호를 받음
     cache_servers.append((addr[0], port))  # 캐시 서버 정보 저장
 
-    # 캐시 서버에 대한 추가 처리 가능
-    conn.close()
+
 
 def start_server():
     # create_virtual_files()  # 서버가 시작되면 가상 파일 생성

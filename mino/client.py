@@ -109,11 +109,9 @@ def start_client():
         
         # 캐시 서버 정보를 수신
         cache_servers = []
-        while True:
-            data = data_server_conn.recv(1024)
-            if not data:
-                break
-            cache_servers.append(data.decode().strip().split(':'))
+
+        data = data_server_conn.recv(1024)
+        cache_servers.append(data.decode().strip().split(':'))
 
     print(f"수신한 캐시 서버 정보: {cache_servers}")
 

@@ -118,8 +118,7 @@ def start_server():
         print(f"클라이언트 연결 완료: {addr}")
 
         # 클라이언트에게 캐시 서버 정보를 전송
-        for cache_server in cache_servers:
-            conn.sendall(f"{cache_server[0]}:{cache_server[1]}\n".encode())
+        conn.sendall(f"{cache_servers[0]}:{cache_servers[1]}".encode())
 
     # 4개의 클라이언트가 연결된 후에 요청 처리 시작
     print(f"모든 클라이언트가 연결됨. 파일 전송 시작.")
