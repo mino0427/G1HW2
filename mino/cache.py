@@ -25,9 +25,9 @@ cache = {}
 cache_size = 0  # 현재 캐시 사용량 (KB)
 
 # 파일 전송 시간 계산 및 전송 처리
-def send_file(conn, file_num, file_data, file_size_kb, speed_kbps):
+def send_file(conn, file_num, file_data, file_size_kb, speed_kbps, request_cnt):
     # 파일 전송 메시지 생성
-    message = f"FILE:{file_num}:".encode() + file_data + Max
+    message = f"FILE:{file_num}:".encode() + file_data + Max + request_cnt
     # 전송 시간 계산
     transfer_time = file_size_kb * 8 / speed_kbps  # 전송에 필요한 시간 계산
     time.sleep(transfer_time)  # 전송 시간 동안 대기
@@ -140,6 +140,31 @@ def handle_client(conn, addr):
                     # 캐시 미스
                     conn.sendall("MSG:Cache Miss".encode())
                     print(f"Cache Miss: {file_num}번 파일 캐시에 없음, 데이터 서버로 요청")
+
+        elif message.startswith("FILE:"):
+            try:
+                _, file_num, file_data, max_file_num, request_cnt = message.split(":", 4)
+                file_num = int(file_num)
+                max_file_num = int(max_file_num)
+                request_cnt = int(request_cnt)
+                file_data = file_data.encode()  # 파일 데이터를 바이트 형식으로 변환
+
+                file_size_kb = len(file_data) // 1024  # 바이트를 KB로 변환
+
+                # Max 값을 업데이트
+                with cache_lock:
+                    if max_file_num > Max:
+                        Max = max_file_num
+                        print(f"Max 값이 {Max}로 업데이트되었습니다.")
+
+                    if cache_size + file_size_kb <= CACHE_CAPACITY_KB:
+                        cache.append() = [file_num, file_data, request_cnt]
+                        cache_size += file_size_kb
+                        print(f"파일 {file_num}을(를) 캐시에 저장했습니다. 현재 캐시 사용량: {cache_size} KB")
+                    else:
+                        print(f"캐시 용량 부족으로 파일 {file_num}을(를) 캐시에 저장하지 못했습니다.")
+            except ValueError as e:
+                print(f"파일 메시지 파싱 중 오류 발생: {e}")
     conn.close()
     print(f"클라이언트 연결 종료: {addr}")
 
