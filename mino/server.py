@@ -19,7 +19,7 @@ def create_virtual_files():
     print("가상 파일 생성 시작...")
     with virtual_files_lock:
         for file_num in range(1, 100001):
-            file_size = (file_num % 10000) + 1  # 파일 크기는 1 ~ 10,000kb 반복
+            file_size = file_num  # 파일 크기는 1 ~ 10,000kb 반복
             virtual_files[file_num] = file_size  # 파일 크기만 저장 (kb 단위)
     print(f"총 {len(virtual_files)}개의 가상 파일 크기 정보 생성 완료!")
 
