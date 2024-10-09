@@ -35,8 +35,12 @@ def send_file(conn, file_num, file_size_kb, speed_kbps):
 
     # 실제 파일 데이터 전송
     total_bytes = file_size_kb * 1024 // 8  # 바이트 단위로 변환
-    file_data = b'X' * total_bytes  # 가상 데이터 생성
-    conn.sendall(file_data)  # 전체 파일 데이터 전송
+    sent_bytes = 0
+    while sent_bytes < total_bytes:
+        chunk_size = min(4096, total_bytes - sent_bytes)
+        chunk = b'X' * chunk_size  # 가상 데이터 생성
+        conn.sendall(chunk)
+        sent_bytes += chunk_size
     print(f"파일 전송 완료: 파일 번호 {file_num}, 크기 {file_size_kb} kb, 실제 소요 시간 {transfer_time:.2f}초")
 
 def handle_client(conn, addr):
@@ -55,7 +59,7 @@ def handle_client(conn, addr):
             print(f"데이터 서버: {addr}로부터 {file_num}번 파일 요청 수신")
 
             # 요청한 파일의 크기 계산
-            file_size_kb = ((file_num - 1) % 10000) + 1  # 파일 크기: 1 ~ 10,000 kb
+            file_size_kb = file_num  # 파일 크기: 1 ~ 10,000 kb
             send_file(conn, file_num, file_size_kb, DATA_TO_CACHE_SPEED)
             # file_num = int(data.decode())
         except ValueError:
@@ -84,7 +88,6 @@ def handle_cache_server(conn, addr):
     cache_servers.append((addr[0], port))  # 캐시 서버 정보 저장
 
     # 캐시 서버에 대한 추가 처리 가능
-    conn.close()
 
 def start_server():
     # create_virtual_files()  # 서버가 시작되면 가상 파일 생성

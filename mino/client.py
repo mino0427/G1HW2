@@ -35,59 +35,59 @@ def receive_file(conn, file_size_kb, donwload_speed_kbps):
 
 # 캐시 서버에 파일 요청
 def request_file_from_cache(cache_host, cache_port, file_num):
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as cache_conn:
-        try:
-            print(f"클라이언트: {cache_host}:{cache_port}로 {file_num}번 파일 요청 중...")
-            cache_conn.connect((cache_host, int(cache_port)))
-            print(f"캐시 서버 {cache_host}:{cache_port}에 연결되었습니다.")
-            cache_conn.sendall(str(file_num).encode())
+    cache_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        print(f"클라이언트: {cache_host}:{cache_port}로 {file_num}번 파일 요청 중...")
+        cache_conn.connect((cache_host, int(cache_port)))
+        print(f"캐시 서버 {cache_host}:{cache_port}에 연결되었습니다.")
+        cache_conn.sendall(str(file_num).encode())
 
-            # 캐시 서버의 응답 수신
-            response = cache_conn.recv(1024).decode()
-            if response == "Cache Hit":
-                print(f"캐시 히트 발생: {file_num}번 파일")
+        # 캐시 서버의 응답 수신
+        response = cache_conn.recv(1024).decode()
+        if response == "Cache Hit":
+            print(f"캐시 히트 발생: {file_num}번 파일")
 
-                #파일 크기 수신
-                data = cache_conn.recv(1024).decode()
-                file_size_kb = int(data)
-                print(f"캐시 서버로부터 파일 크기 수신: {file_size_kb} kb")
+            #파일 크기 수신
+            data = cache_conn.recv(1024).decode()
+            file_size_kb = int(data)
+            print(f"캐시 서버로부터 파일 크기 수신: {file_size_kb} kb")
 
-                # 파일 데이터 수신
-                file_data = receive_file(cache_conn, file_size_kb, DOWNLOAD_SPEED_FROM_CACHE_SERVER)
-                virtual_storage[file_num] = file_data  # 가상 저장소에 파일 데이터 저장
-                print(f"캐시 서버에서 파일 수신 완료: {file_num}번 파일")
-                return True  # 파일 수신 성공
-            elif response == "Cache Miss":
-                print(f"캐시 미스 발생: {file_num}번 파일")
-                return False  # 캐시 미스 발생
-            else:
-                print(f"알 수 없는 응답: {response}")
-                return False  # 오류 처리
-        
-        except Exception as e:
-            print(f"캐시 서버에서 파일 수신 중 오류 발생")
-            return False  # 파일 수신 실패
+            # 파일 데이터 수신
+            file_data = receive_file(cache_conn, file_size_kb, DOWNLOAD_SPEED_FROM_CACHE_SERVER)
+            virtual_storage[file_num] = file_data  # 가상 저장소에 파일 데이터 저장
+            print(f"캐시 서버에서 파일 수신 완료: {file_num}번 파일")
+            return True  # 파일 수신 성공
+        elif response == "Cache Miss":
+            print(f"캐시 미스 발생: {file_num}번 파일")
+            return False  # 캐시 미스 발생
+        else:
+            print(f"알 수 없는 응답: {response}")
+            return False  # 오류 처리
+    
+    except Exception as e:
+        print(f"캐시 서버에서 파일 수신 중 오류 발생")
+        return False  # 파일 수신 실패
 
 # 데이터 서버에 파일 요청
 def request_file_from_data_server(file_num):
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as data_server_conn:
-        try:
-            print(f"데이터 서버로 {file_num}번 파일 요청 중...")
-            data_server_conn.connect((DATA_SERVER_HOST, DATA_SERVER_PORT))
-            print(f"데이터 서버 {DATA_SERVER_HOST}:{DATA_SERVER_PORT}에 연결되었습니다.")
-            data_server_conn.sendall(str(file_num).encode())
-            
-            # 파일 크기 수신
-            data = data_server_conn.recv(1024).decode()
-            file_size_kb = int(data)
-            print(f"데이터 서버로부터 파일 크기 수신: {file_size_kb} kb")
-            
-            # 파일 데이터 수신
-            file_data = receive_file(data_server_conn, file_size_kb, DOWNLOAD_SPEED_FROM_DATA_SERVER)
-            virtual_storage[file_num] = file_data  # 가상 저장소에 파일 데이터 저장
-            print(f"데이터 서버에서 파일 수신 완료: {file_num}번 파일")
-        except Exception as e:
-            print(f"데이터 서버에서 파일 수신 중 오류 발생: {e}")
+    data_server_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        print(f"데이터 서버로 {file_num}번 파일 요청 중...")
+        data_server_conn.connect((DATA_SERVER_HOST, DATA_SERVER_PORT))
+        print(f"데이터 서버 {DATA_SERVER_HOST}:{DATA_SERVER_PORT}에 연결되었습니다.")
+        data_server_conn.sendall(str(file_num).encode())
+        
+        # 파일 크기 수신
+        data = data_server_conn.recv(1024).decode()
+        file_size_kb = int(data)
+        print(f"데이터 서버로부터 파일 크기 수신: {file_size_kb} kb")
+        
+        # 파일 데이터 수신
+        file_data = receive_file(data_server_conn, file_size_kb, DOWNLOAD_SPEED_FROM_DATA_SERVER)
+        virtual_storage[file_num] = file_data  # 가상 저장소에 파일 데이터 저장
+        print(f"데이터 서버에서 파일 수신 완료: {file_num}번 파일")
+    except Exception as e:
+        print(f"데이터 서버에서 파일 수신 중 오류 발생: {e}")
 
 # 파일 요청 로직 최적화
 def request_file(file_num, cache_servers):
@@ -104,15 +104,28 @@ def request_file(file_num, cache_servers):
 # 메인 클라이언트 함수
 def start_client():
     # 데이터 서버에 연결하여 캐시 서버 정보 수신
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as data_server_conn:
+    data_server_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:                                
         data_server_conn.connect((DATA_SERVER_HOST, DATA_SERVER_PORT))
         
         # 캐시 서버 정보를 수신
         cache_servers = []
+<<<<<<< HEAD
 
         data = data_server_conn.recv(1024)
         cache_servers.append(data.decode().strip().split(':'))
 
+=======
+        while True:
+            data = data_server_conn.recv(1024)
+            if not data:
+                break
+            cache_servers.append(data.decode().strip().split(':'))
+    except Exception as e:
+        print(f"데이터 서버에 연결하여 캐시 서버 정보 수신 중 오류 발생: {e}")
+        cache_servers = []
+        
+>>>>>>> e9cf3a630f059a2d799c93f444bbbf79cf7a30fe
     print(f"수신한 캐시 서버 정보: {cache_servers}")
 
     # 1,000개의 파일 요청 (예: 1번 ~ 1000번 파일을 요청)

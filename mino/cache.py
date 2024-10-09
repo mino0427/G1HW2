@@ -32,7 +32,7 @@ def send_file(conn, file_data, file_size_kb, speed_kbps):
 
 # 데이터 서버에서 파일을 요청하는 함수
 def request_from_data_server(file_num):
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             s.connect((DATA_SERVER_HOST, DATA_SERVER_PORT))
             s.sendall(str(file_num).encode())
@@ -68,6 +68,7 @@ def request_from_data_server(file_num):
         except Exception as e:
             print(f"데이터 서버에서 파일 수신 중 오류 발생: {e}")
             return None
+        s.close()
 
 def handle_client(conn, addr):
     print(f"연결된 클라이언트: {addr}")
@@ -121,23 +122,26 @@ def start_cache_server():
     cache_lock = threading.Lock()
 
     # 먼저 데이터 서버와 연결
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as data_server_conn:
-        try:
-            print(f"데이터 서버 {DATA_SERVER_HOST}:{DATA_SERVER_PORT}에 연결 시도 중...")
-            data_server_conn.connect((DATA_SERVER_HOST, DATA_SERVER_PORT))
-            print("데이터 서버 연결 완료!")
+    data_server_conn =  socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        print(f"데이터 서버 {DATA_SERVER_HOST}:{DATA_SERVER_PORT}에 연결 시도 중...")
+        data_server_conn.connect((DATA_SERVER_HOST, DATA_SERVER_PORT))
+        print("데이터 서버 연결 완료!")
 
-            # 캐시 서버 소켓 설정 (자동 포트 할당)
-            server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            server.bind((HOST, 0))  # 운영체제가 자동으로 사용 가능한 포트 할당
-            cache_port = server.getsockname()[1]  # 할당받은 포트 번호 확인
-            print(f"캐시 서버의 할당된 포트 번호: {cache_port}")
-            
-            # 데이터 서버에 캐시 서버의 포트 번호 전송
-            data_server_conn.sendall(str(cache_port).encode())
-        except ConnectionRefusedError:
-            print("데이터 서버에 연결할 수 없습니다. 데이터 서버가 실행 중인지 확인하세요.")
-            return
+        # 캐시 서버 소켓 설정 (자동 포트 할당)
+        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server.bind((HOST, 0))  # 운영체제가 자동으로 사용 가능한 포트 할당
+        cache_port = server.getsockname()[1]  # 할당받은 포트 번호 확인
+        print(f"캐시 서버의 할당된 포트 번호: {cache_port}")
+        
+        # 데이터 서버에 캐시 서버의 포트 번호 전송
+        data_server_conn.sendall(str(cache_port).encode())
+    except ConnectionRefusedError:
+        print("데이터 서버에 연결할 수 없습니다. 데이터 서버가 실행 중인지 확인하세요.")
+        return
+    except Exception as e:
+        print(f"데이터 서버 연결 중 예외 발생: {e}")
+        return
         
     # 캐시 서버 실행
     server.listen()
