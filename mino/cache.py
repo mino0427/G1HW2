@@ -156,11 +156,18 @@ def handle_client(conn, addr):
                     if max_file_num > Max:
                         Max = max_file_num
                         print(f"Max 값이 {Max}로 업데이트되었습니다.")
-
+                    # 딕셔너리
                     if cache_size + file_size_kb <= CACHE_CAPACITY_KB:
-                        cache.append() = [file_num, file_data, request_cnt]
+                        # 파일 번호를 키로 하고, [file_data, request_cnt] 리스트를 값으로 저장
+                        cache[file_num] = [file_data, request_cnt]
                         cache_size += file_size_kb
                         print(f"파일 {file_num}을(를) 캐시에 저장했습니다. 현재 캐시 사용량: {cache_size} KB")
+
+                    # 리스트로 바꿨을 때 사용
+                    # if cache_size + file_size_kb <= CACHE_CAPACITY_KB:
+                    #     cache.append() = ([file_num, file_data, request_cnt])
+                    #     cache_size += file_size_kb
+                    #     print(f"파일 {file_num}을(를) 캐시에 저장했습니다. 현재 캐시 사용량: {cache_size} KB")
                     else:
                         print(f"캐시 용량 부족으로 파일 {file_num}을(를) 캐시에 저장하지 못했습니다.")
             except ValueError as e:
@@ -221,9 +228,10 @@ def start_cache_server():
 if __name__ == "__main__":
     start_cache_server()
 
-# 해야할일
 # 전역변수 Max 선언 O
+# 데이터 서버에 파일을 받을 때 계속 max값 업데이트 하기 O
+# 형식-> FILE:file_num:file_data:Max:request_cnt O (설명 파일 데이터 전송 시 , FILE: 파일 번호 : 파일 데이터:캐시에 보내지는 파일 중 가장 크기가 큰 파일 번호)
+
+# 해야할일
 # 데이터 서버에 파일을 요청할 때 조건 만들기 (25MB(캐시 서버 용량) - cache{} list에 모든 파일 번호들의 합 > Max + 2 일때, 데이터 서버에 파일 요청)
 # 데이터 서버에서 파일 중복 개수(count)가 0이 될 때마다, Max + 2를 다운 받을 수 있는지 확인한다
-# 데이터 서버에 파일을 받을 때 계속 max값 업데이트 하기
-# 형식-> FILE:file_num:file_data:Max (설명 파일 데이터 전송 시 , FILE: 파일 번호 : 파일 데이터:캐시에 보내지는 파일 중 가장 크기가 큰 파일 번호)
