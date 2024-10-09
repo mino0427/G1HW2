@@ -110,22 +110,11 @@ def start_client():
         
         # 캐시 서버 정보를 수신
         cache_servers = []
-<<<<<<< HEAD
-
         data = data_server_conn.recv(1024)
         cache_servers.append(data.decode().strip().split(':'))
-
-=======
-        while True:
-            data = data_server_conn.recv(1024)
-            if not data:
-                break
-            cache_servers.append(data.decode().strip().split(':'))
     except Exception as e:
         print(f"데이터 서버에 연결하여 캐시 서버 정보 수신 중 오류 발생: {e}")
         cache_servers = []
-        
->>>>>>> e9cf3a630f059a2d799c93f444bbbf79cf7a30fe
     print(f"수신한 캐시 서버 정보: {cache_servers}")
 
     # 1,000개의 파일 요청 (예: 1번 ~ 1000번 파일을 요청)
