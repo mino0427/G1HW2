@@ -18,7 +18,7 @@ def random_list():
 # 랜덤 리스트 전송
 def send_random_list(data_server_conn, random_list):
     random_list = ':'.join(map(str, random_list)) 
-    random_msg = f"RANDOM:{random_list}"
+    random_msg = f"RANDOM:{random_list}\n"
     data_server_conn.sendall(random_msg.encode())
     print(f"데이터 서버로 랜덤 리스트 전송: {random_msg}")
 
@@ -63,14 +63,14 @@ def request_file(file_num, cache_conns, data_server_conn):
     #     if request_cache(cache_conn, file_num):
     #         return
 
-    # 첫 번째 캐시 서버(홀수 파일 관리)
+    # 홀수 파일인 경우 첫 번째 캐시 서버에 요청
     if file_num % 2 != 0:
-        if request_cache(file_num, cache_conns[0], is_odd_server=True):
+        if request_cache(file_num, cache_conns[0]): 
             return
 
-    # 두 번째 캐시 서버(짝수 파일 관리)
+    # 짝수 파일인 경우 두 번째 캐시 서버에 요청
     if file_num % 2 == 0:
-        if request_cache(file_num, cache_conns[1], is_odd_server=False):
+        if request_cache(file_num, cache_conns[1]):
             return
 
     # 모든 캐시 서버에서 캐시 미스가 발생하면 데이터 서버에 요청
@@ -78,17 +78,9 @@ def request_file(file_num, cache_conns, data_server_conn):
     request_data_server(file_num, data_server_conn)
 
 # 캐시 서버에 파일 요청 (유지된 연결 사용)
-def request_cache(file_num, cache_conn,is_odd_server=True):
+def request_cache(file_num, cache_conn):
     try:
-        # 홀수 캐시 서버와 짝수 캐시 서버를 구분
-        if is_odd_server and file_num % 2 == 0:
-            print(f"홀수 파일 캐시 서버에 짝수 파일 {file_num} 요청 불가.")
-            return False  # 짝수 파일은 홀수 서버에 요청할 수 없음
-        if not is_odd_server and file_num % 2 != 0:
-            print(f"짝수 파일 캐시 서버에 홀수 파일 {file_num} 요청 불가.")
-            return False  # 홀수 파일은 짝수 서버에 요청할 수 없음
-
-        request_msg = f"REQUEST:{file_num}"
+        request_msg = f"REQUEST:{file_num}\n"
         cache_conn.sendall(request_msg.encode()) 
         print(f"캐시 서버로 {file_num}번 파일 요청 중...")
 
@@ -117,7 +109,7 @@ def request_cache(file_num, cache_conn,is_odd_server=True):
 # 데이터 서버에 파일 요청
 def request_data_server(file_num, data_server_conn):
     try:
-        request_msg = f"REQUEST:{file_num}"
+        request_msg = f"REQUEST:{file_num}\n"
         data_server_conn.sendall(request_msg.encode())
         print(f"데이터 서버에 {file_num}번 파일 요청 전송")
         
@@ -140,16 +132,16 @@ def start_client():
         # 캐시 서버 정보를 수신
         cache_servers = []
         data = data_server_conn.recv(1024).decode()
-        
-        # 수신된 캐시 서버 정보를 문자열로 처리하여 올바른 형식으로 변환
-        server_info = data.strip().split(',')
-        for server in server_info:
-            # 문자열에서 IP와 포트 추출
-            cache_host, cache_port = server.replace("(", "").replace(")", "").replace("'", "").split(',')
-            cache_servers.append((cache_host.strip(), int(cache_port.strip())))  # 포트를 정수로 변환하여 저장
+        server_info = data.strip().split(':')  # ':'으로 구분
+
+        # IP와 포트는 짝으로 구성되므로 두 개씩 처리
+        for i in range(0, len(server_info), 2):
+            cache_host = server_info[i].strip()  # IP 주소
+            cache_port = int(server_info[i + 1].strip())  # 포트 번호
+            cache_servers.append((cache_host, cache_port))  # 튜플로 (IP, 포트)를 리스트에 저장
+                
     except Exception as e:
         print(f"데이터 서버에 연결하여 캐시 서버 정보 수신 중 오류 발생: {e}")
-        cache_servers = []
 
     print(f"수신한 캐시 서버 정보: {cache_servers}")
 
@@ -161,12 +153,28 @@ def start_client():
         cache_conns.append(cache_conn)
         print(f"캐시 서버 {cache_host}:{cache_port}에 연결 유지")
 
-    # 랜덤 1,000개 파일 요청
-    file_request_list = random_list()  # 랜덤 파일 리스트 생성
-    for file_num in file_request_list:
-        request_file(file_num, cache_conns,data_server_conn)
-        # 데이터, 캐시 서버와 연결 유지
+    file_request_list = random_list() #랜덤 리스트 생성
+    send_random_list(data_server_conn, file_request_list) #랜덤 리스트 데이터 서버에 전송
 
+    #데이터 서버에게 FLAG:1을 받으면 요청 시작
+    flag_msg = data_server_conn.recv(4096).decode()
+    if flag_msg == "FLAG:1\n":
+        print("데이터 서버에서 FLAG:1 수신. 파일 요청 시작.")
+        # 랜덤 1,000개 파일 요청
+        # for file_num in file_request_list:
+        #     request_file(file_num, cache_conns,data_server_conn)
+        #     # 데이터, 캐시 서버와 연결 유지
+
+    while file_request_list:
+        if random.random() < 0.2:  # 20% 확률
+            file_num = file_request_list.pop(-1)  # 리스트에서 가장 큰 파일
+            print(f"20% 확률로 가장 큰 파일 {file_num} 요청 중...")
+        else:
+            file_num = file_request_list.pop(0)  # 리스트에서 가장 작은 파일
+            print(f"가장 작은 파일 {file_num} 요청 중...")
+
+        # 파일 요청 처리
+        request_file(file_num, cache_conns, data_server_conn)
 
 if __name__ == "__main__":
     start_client()
