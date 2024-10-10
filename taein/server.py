@@ -219,6 +219,7 @@ def request_processing(conn, addr):
                     
                     if processed_file==4000:
                         set_cache()
+                        send_flag_to_all()
                         
                 else:
                     print(f"잘못된 요청 형식 수신: {message}")
@@ -293,6 +294,7 @@ def start_server():
     for conn, addr in client_conns:
         thread = threading.Thread(target=request_processing, args=(conn, addr))
         thread.start()
+
 
 
 if __name__ == "__main__":
