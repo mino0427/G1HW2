@@ -23,11 +23,17 @@ CACHE_CAPACITY_KB = 25 * 1024  # 25MB를 KB로 변환
 
 cache = {}
 cache_size = 0  # 현재 캐시 사용량 (KB)
+cache_key_sum = 0  # 캐시의 키 값들의 합
 
 # 파일 전송 시간 계산 및 전송 처리
-def send_file(conn, file_num, file_data, file_size_kb, speed_kbps, request_cnt):
+def send_file(conn, file_num, file_data, file_size_kb, speed_kbps, request_cnt, max_file_num):
+    global cache_key_sum
+
     # 파일 전송 메시지 생성
-    message = f"FILE:{file_num}:".encode() + file_data + Max + request_cnt
+    header_message = f"FILE:{file_num}"
+    tail_message = f"{max_file_num}:{request_cnt}"
+
+    full_message = header_message + file_data + tail_message +"\n"
     # 전송 시간 계산
     transfer_time = file_size_kb * 8 / speed_kbps  # 전송에 필요한 시간 계산
     time.sleep(transfer_time)  # 전송 시간 동안 대기
@@ -37,12 +43,12 @@ def send_file(conn, file_num, file_data, file_size_kb, speed_kbps, request_cnt):
     sent_bytes = 0
     while sent_bytes < total_bytes:
         chunk_size = min(4096, total_bytes - sent_bytes)
-        chunk = file_data[sent_bytes:sent_bytes + chunk_size]
+        chunk = file_data[sent_bytes:sent_bytes + chunk_size].encode()
         conn.sendall(chunk)
         sent_bytes += chunk_size
 
     conn.sendall(f"MSG:파일 전송 완료 {file_size_kb} kb".encode())
-    conn.sendall(file_data)  # 실제 파일 데이터 전송
+    # conn.sendall(file_data)  # 실제 파일 데이터 전송
 
 # 데이터 서버에서 파일을 요청하는 함수  <-이 부분에 Max + 2(홀 짝이니까)와 zero_request_list에 저장된 파일 번호의 총합(=파일의 사이즈 총합)이 데이터 서버로 부터 받을 파일의 크기보다 크다면 zero_request_list를 비우고, 데이터 서버에 새로운 파일을 요청한다.
 def request_from_data_server(file_num):
@@ -61,10 +67,11 @@ def request_from_data_server(file_num):
 
             if message.startswith("FILE:"):
                 # 파일 데이터 수신
-                header, file_num, file_data, max_file_num, request_cnt = message.split(":", 4)[0:4], data[len("FILE:{file_num}:".format(file_num=file_num)):]
-                # header, file_data = message.split(":", 2)[0:2], data[len("FILE:{file_num}:".format(file_num=file_num)):]
-                _, received_file_num = header.split(":")
+                _, file_num, file_data, max_file_num, request_cnt = message.split(":", 4)[0:4], data[len("FILE:{file_num}:".format(file_num=file_num)):]
                 received_file_num = int(received_file_num)
+                max_file_num = int(max_file_num)
+                request_cnt = int(request_cnt)
+                file_data = file_data.encode()
             
                 if received_file_num != file_num:
                     print(f"받은 파일 번호가 요청한 파일 번호와 다릅니다.")
@@ -234,6 +241,25 @@ if __name__ == "__main__":
 # 형식-> FILE:file_num:file_data:Max:request_cnt O (설명 파일 데이터 전송 시 , FILE: 파일 번호 : 파일 데이터:캐시에 보내지는 파일 중 가장 크기가 큰 파일 번호)
 
 # 해야할일
-# 데이터 서버에 파일을 요청할 때 조건 만들기 (25MB(캐시 서버 용량) - cache{} list에 모든 파일 번호들의 합 > Max + 2 일때, 데이터 서버에 파일 요청)
-# 데이터 서버에서 파일 중복 개수(count)가 0이 될 때마다, Max + 2를 다운 받을 수 있는지 확인한다
+# 데이터 서버에 파일을 요청할 때 조건 만들기
+# (25MB(캐시 서버 용량) - cache{} list에 모든 파일 번호들의 합 > max_file_num
+# 데이터 서버에서 받은 max_file_num(데이터 서버에서는 최솟값)
+# 데이터 서버에서 파일 중복 개수(count)가 0이 될 때마다, max_file_num를 다운 받을 수 있는지 확인한다
 # 딕셔너리 키값 계산 법 -> cache_key_sum (변수명) = sum(cache.keys())
+
+# 캐시를 딕셔너리로 해보고 안되면 리스트로 바꾸기 (일단 딕셔너리로 하는중)
+# 캐시1은 홀수 캐시2는 짝수 파일 넘버를 관리
+
+# request from data server
+# 파일 요청 조건은
+# 캐시 서버 용량 - 캐시 딕셔너리의 키 값들의 합 > Max file num (용량 확인 계산)
+# 데이터 서버에서 행렬이 0이아닌 최솟값을 파일 넘버만 받아서 캐시서버에 max file num으로 저장한다.
+# 용량확인 계산을 하고 조건을 만족했을 때 요청
+
+# 파일 요청 시에도 캐시1은 홀수 파일 넘버의 파일을 요청해야하고
+# 캐시2는 짝수 파일 넘버의 파일을 데이터 서버에 요청한다.
+
+# receive data
+# starts with request ㅡ 클라이언트에게 요청을 받으면 캐시1은 홀수 파일을 클라이언트가 요청 하는데로 전송하고, 캐시2는 짝수 파일을 전송한다
+# request cnt가 0이 된 값은 delete를 하고
+# request cnt가 0이 될 때마다 delete되고 남아있는 딕셔너리의 키 값들을 더해서 용량 확인 계산을 한다
