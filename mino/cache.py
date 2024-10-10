@@ -27,6 +27,10 @@ cache_key_sum = 0  # 캐시의 키 값들의 합
 
 # 데이터 서버 연결 설정
 data_server_socket = None
+data_server_lock = threading.Lock()
+
+# 데이터 서버 연결 설정
+data_server_socket = None
 
 def connect_to_data_server(host, port):
     global data_server_socket
@@ -100,6 +104,7 @@ def request_from_data_server(file_num):
                 print(f"free_space({free_space} KB) <= Max({Max}) 조건 불만족, 대기 중...")
 
         file_num = Max
+        
         with data_server_lock:
             try:
                 data_server_socket.sendall(f"REQUEST:{file_num}".encode())
