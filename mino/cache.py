@@ -88,7 +88,7 @@ def receive_max_file_num():
 
 # 데이터 서버에서 파일을 요청하는 함수
 def request_from_data_server(file_num):
-        global cache_size, cache_key_sum
+        global cache_size, cache_key_sum, Max
         free_space = CACHE_CAPACITY_KB - cache_size
 
         # 데이터 서버에서 Max 값을 지속적으로 수신하는 스레드 시작
@@ -108,9 +108,8 @@ def request_from_data_server(file_num):
         with data_server_lock:
             try:
                 data_server_socket.sendall(f"REQUEST:{file_num}".encode())
-                # 연결이 끊어진 경우 다시 연결 시도
-                if data_server_socket is None:
-                    connect_to_data_server(DATA_SERVER_HOST, DATA_SERVER_PORT)
+                # 데이터 서버로부터 파일 수신
+                data = receive_data(data_server_socket)
 
                 if data_server_socket:
                 # 파일 요청 메시지 전송
@@ -161,24 +160,26 @@ def request_from_data_server(file_num):
                 print(f"데이터 서버에서 파일 수신 중 오류 발생: {e}")
                 return None, None
 
+        # Max 값 수신 스레드 종료
+        max_file_num_thread.join()
+
+def receive_data(socket):
+    data = b''
+    while True:
+        try:
+            chunk = socket.recv(4096)
+            if not chunk:
+                break
+            data += chunk
+            # 메시지 끝을 확인하기 위해 줄바꿈 또는 특정 구분자를 사용할 수 있습니다.
+            if b'\n' in chunk:
+                break
+        except:
+            break
+    return data
 
 def handle_client(conn, addr):
     print(f"연결된 클라이언트: {addr}")
-
-    def receive_data():
-        data = b''
-        while True:
-            try:
-                chunk = conn.recv(4096)
-                if not chunk:
-                    break
-                data += chunk
-                # 메시지 끝을 확인하기 위해 줄바꿈 또는 특정 구분자를 사용할 수 있습니다.
-                if b'\n' in chunk:
-                    break
-            except:
-                break
-        return data
     
     while True:
         data = receive_data()
@@ -234,12 +235,6 @@ def handle_client(conn, addr):
                         cache[file_num] = [file_data, request_cnt]
                         cache_size += file_size_kb
                         print(f"파일 {file_num}을(를) 캐시에 저장했습니다. 현재 캐시 사용량: {cache_size} KB")
-
-                    # 리스트로 바꿨을 때 사용
-                    # if cache_size + file_size_kb <= CACHE_CAPACITY_KB:
-                    #     cache.append() = ([file_num, file_data, request_cnt])
-                    #     cache_size += file_size_kb
-                    #     print(f"파일 {file_num}을(를) 캐시에 저장했습니다. 현재 캐시 사용량: {cache_size} KB")
                     else:
                         print(f"캐시 용량 부족으로 파일 {file_num}을(를) 캐시에 저장하지 못했습니다.")
             except ValueError as e:
@@ -254,6 +249,8 @@ def close_data_server_connection():
         data_server_socket.close()
         data_server_socket = None
         print("데이터 서버와의 연결이 종료되었습니다.")
+    
+    #flag추가
 
 def start_cache_server():
     global cache_lock
@@ -306,10 +303,6 @@ def start_cache_server():
 
 if __name__ == "__main__":
     start_cache_server()
-
-# 전역변수 Max 선언 O
-# 데이터 서버에 파일을 받을 때 계속 max값 업데이트 하기 O
-# 형식-> FILE:file_num:file_data:Max:request_cnt O (설명 파일 데이터 전송 시 , FILE: 파일 번호 : 파일 데이터:캐시에 보내지는 파일 중 가장 크기가 큰 파일 번호)
 
 # 해야할일
 # 데이터 서버에 파일을 요청할 때 조건 만들기
