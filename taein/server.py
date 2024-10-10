@@ -17,9 +17,9 @@ virtual_files = {}  # 가상 파일 저장 (파일 번호: 파일 크기)
 
 data_array = [0] * 10001 #클라이언트의 요청 횟수를 저장한다.
 FLAG=1 #프로그램 시작과 종료를 알리는 FLAG 변수(1: 시작, 0: 종료)
-Max=[0,0] #Max[0]은 짝수 캐시에 보낸 가장 큰 파일 번호, Max[1]은 홀수 캐시에 보낸 가장 큰 파일 번호
+Max=[2,1] #Max[0]은 짝수 캐시에 보낸 가장 큰 파일 번호, Max[1]은 홀수 캐시에 보낸 가장 큰 파일 번호
 next_min = [None, None]  # next_min은 캐시에게 보낼 다음 파일 번호(0: 짝수, 1: 홀수)
-processed_file=4000
+processed_file=0
 
 virtual_files_lock = threading.Lock()
 # 가상 파일 생성
@@ -127,6 +127,44 @@ def send_file(conn, file_num, file_size_kb, speed_kbps):
             FLAG=0
             send_flag_to_all()
 
+def set_cache(): #홀짝캐시에게 25MB만큼의 데이터 전송하기
+    total_mb_sent_even = 0  # 짝수 캐시에게 보낸 총 데이터 크기 (MB)
+    total_mb_sent_odd = 0   # 홀수 캐시에게 보낸 총 데이터 크기 (MB)
+
+    # 짝수 캐시와 홀수 캐시의 conn 구분
+    even_cache_conn = cache_servers[0][2]  # 짝수 캐시의 conn
+    odd_cache_conn = cache_servers[1][2]   # 홀수 캐시의 conn
+
+    # 짝수 인덱스부터 시작해서 캐시로 파일 보내기
+    for file_num in range(2, len(data_array), 2):  # 짝수 파일 번호만 순회
+        if data_array[file_num] > 0:
+            file_size_kb = file_num  # 파일 번호가 곧 크기(KB 단위)
+            file_size_mb = file_size_kb / 1024  # MB 단위로 변환
+
+            if total_mb_sent_even + file_size_mb <= 25:  # 25MB를 넘지 않도록
+                # send_file 함수를 사용하여 짝수 캐시에 파일 전송
+                send_file(even_cache_conn, file_num, file_size_kb, DATA_TO_CACHE_SPEED)
+                total_mb_sent_even += file_size_mb  # 전송한 데이터 크기 업데이트          
+                
+            else:
+                break  # 25MB를 넘으면 중단
+
+    # 홀수 인덱스부터 시작해서 캐시로 파일 보내기
+    for file_num in range(1, len(data_array), 2):  # 홀수 파일 번호만 순회
+        if data_array[file_num] > 0:
+            file_size_kb = file_num  # 파일 번호가 곧 크기(KB 단위)
+            file_size_mb = file_size_kb / 1024  # MB 단위로 변환
+
+            if total_mb_sent_odd + file_size_mb <= 25:  # 25MB를 넘지 않도록
+                # send_file 함수를 사용하여 짝수 캐시에 파일 전송
+                send_file(odd_cache_conn, file_num, file_size_kb, DATA_TO_CACHE_SPEED)
+                total_mb_sent_odd += file_size_mb  # 전송한 데이터 크기 업데이트          
+                
+            else:
+                break  # 25MB를 넘으면 중단
+
+    print("캐시 서버로 25MB 이내의 파일을 전송 완료했습니다.")
+
 def request_processing(conn, addr): 
     global data_array  # 전역 변수를 함수 내에서 사용하기 위해 선언
 
@@ -177,7 +215,11 @@ def request_processing(conn, addr):
                     # random_list를 참고하여 data_array 업데이트
                     for file_num in random_list:
                         data_array[file_num] += 1  # 파일 번호에 해당하는 요청 횟수 증가
-
+                        processed_file+=1
+                    
+                    if processed_file==4000:
+                        set_cache()
+                        
                 else:
                     print(f"잘못된 요청 형식 수신: {message}")
                     #conn.sendall("잘못된 요청입니다.".encode())
@@ -196,9 +238,9 @@ def handle_cache_server(conn, addr):
     port = conn.recv(1024).decode()  # 캐시 서버의 포트 번호를 받음
     cache_servers.append((addr[0], port, conn))  # 캐시 서버 정보 저장
     
-
     # 캐시 서버에 대한 추가 처리 가능
 
+    
 def send_flag_to_all():
     # 모든 캐시 서버에 FLAG 메시지 전송
     for cache_server in cache_servers:
@@ -255,3 +297,5 @@ def start_server():
 
 if __name__ == "__main__":
     start_server()
+
+
