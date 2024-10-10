@@ -96,79 +96,57 @@ def request_from_data_server(file_num):
         max_file_num_thread.start()
 
         # free_space > Max 조건이 만족될 때까지 대기
-        while True:
+        while True: # 이 True 부분을 Flag로 바꿔서 FLAG:0을 받으면 종료 (종료하면 쓰레드도 같이 종료됌)
             if free_space > Max:
                 print(f"free_space({free_space} KB) > Max({Max}) 조건 만족")
-                break
-            else:
-                print(f"free_space({free_space} KB) <= Max({Max}) 조건 불만족, 대기 중...")
-
-        file_num = Max
-        
-        with data_server_lock:
-            try:
-                data_server_socket.sendall(f"REQUEST:{file_num}".encode())
-                print(f"데이터 서버에 {file_num}번 파일 요청 전송")
-                # 데이터 서버로부터 파일 수신
-                data = receive_data(data_server_socket)
-
-                if data_server_socket:
-                # 파일 요청 메시지 전송
-                    data_server_socket.sendall(f"REQUEST:{file_num}".encode())
-
-                # 데이터 서버 응답 수신
-                    data = data_server_socket.recv(4096)
-                    if not data:
-                        print(f"데이터 서버로부터 응답이 없습니다.")
-                        return None, None
-
-                    message = data.decode(errors='ignore')
-
-                if message.startswith("FILE:"):
-                    # 파일 데이터 수신
+                file_num = Max
+                with data_server_lock:
                     try:
-                        _, file_num, file_data, max_file_num, request_cnt = message.split(":", 4)[0:4], data[len("FILE:{file_num}:".format(file_num=file_num)):]
-                        received_file_num = int(received_file_num)
-                        max_file_num = int(max_file_num)
-                        request_cnt = int(request_cnt)
-                        file_data = file_data.encode()
-                
-                        if received_file_num != file_num:
-                            print(f"받은 파일 번호가 요청한 파일 번호와 다릅니다.")
+                        data_server_socket.sendall(f"REQUEST:{file_num}".encode())
+                        print(f"데이터 서버에 {file_num}번 파일 요청 전송")
+                        # 데이터 서버로부터 파일 수신
+                        data = receive_data(data_server_socket)
+
+                        message = data.decode(errors='ignore')
+
+                        if message.startswith("FILE:"):
+                            # 파일 데이터 수신
+                            try:
+                                _, file_num, file_data, max_file_num, request_cnt = message.split(":", 4)[0:4], data[len("FILE:{file_num}:".format(file_num=file_num)):]
+                                received_file_num = int(received_file_num)
+                                max_file_num = int(max_file_num)
+                                request_cnt = int(request_cnt)
+                                file_data = file_data.encode()
+                        
+                                if received_file_num != file_num:
+                                    print(f"받은 파일 번호가 요청한 파일 번호와 다릅니다.")
+                                    return None, None
+
+                                file_size_kb = len(file_data) // 1024  # 바이트를 KB로 변환
+                        
+                            # 캐시 용량 검사 및 파일 저장
+                                with cache_lock:
+                                    if cache_size + file_size_kb <= CACHE_CAPACITY_KB:
+                                        cache[file_num] = (file_data, file_size_kb)
+                                        cache_size += file_size_kb
+                                        print(f"파일 {file_num}을(를) 캐시에 저장했습니다. 현재 캐시 사용량: {cache_size} KB")
+                                    else:
+                                        print(f"캐시 용량 부족으로 파일 {file_num}을(를) 캐시에 저장하지 못했습니다.")
+                            except ValueError as e:
+                                print(f"파일 메시지 파싱 중 오류 발생: {e}")
+                                return None, None
+                        else:
+                            print(f"알 수 없는 데이터 서버 응답: {message}")
                             return None, None
-
-                        file_size_kb = len(file_data) // 1024  # 바이트를 KB로 변환
-                
-                    # 캐시 용량 검사 및 파일 저장
-                        with cache_lock:
-                            if cache_size + file_size_kb <= CACHE_CAPACITY_KB:
-                                cache[file_num] = (file_data, file_size_kb)
-                                cache_size += file_size_kb
-                                print(f"파일 {file_num}을(를) 캐시에 저장했습니다. 현재 캐시 사용량: {cache_size} KB")
-                            else:
-                                print(f"캐시 용량 부족으로 파일 {file_num}을(를) 캐시에 저장하지 못했습니다.")
-                        return file_data, file_size_kb
-                    except ValueError as e:
-                        print(f"파일 메시지 파싱 중 오류 발생: {e}")
+                    except Exception as e:
+                        print(f"데이터 서버에서 파일 수신 중 오류 발생: {e}")
                         return None, None
-                elif message.startswith("MSG:"):
-                    print(f"데이터 서버 메시지: {message}")
-                    return None, None
-                else:
-                    print(f"알 수 없는 데이터 서버 응답: {message}")
-                    return None, None
-            except Exception as e:
-                print(f"데이터 서버에서 파일 수신 중 오류 발생: {e}")
-                return None, None
-
-        # Max 값 수신 스레드 종료
-        max_file_num_thread.join()
 
 def receive_data(socket):
     data = b''
     while True:
         try:
-            chunk = socket.recv(4096)
+            chunk = socket.recv(4096).decode()
             if not chunk:
                 break
             data += chunk
@@ -194,13 +172,6 @@ def handle_client(conn, addr):
             file_num = int(file_num)
             print(f"클라이언트로부터 파일 {file_num} 요청 수신")
 
-            # 파일 번호에 따른 캐시 서버 역할 확인
-            if cache_server_number == 1 and file_num % 2 == 0:
-                conn.sendall(f"MSG:이 캐시 서버는 홀수 번호의 파일만 처리합니다.\n".encode())
-                continue
-            elif cache_server_number == 2 and file_num % 2 != 0:
-                conn.sendall(f"MSG:이 캐시 서버는 짝수 번호의 파일만 처리합니다.\n".encode())
-                continue
         # 캐시에 있는지 확인
             with cache_lock:
                 if file_num in cache:
@@ -214,32 +185,7 @@ def handle_client(conn, addr):
                     # 캐시 미스
                     conn.sendall("MSG:Cache Miss\n".encode())
                     print(f"Cache Miss: {file_num}번 파일 캐시에 없음, 데이터 서버로 요청")
-
-        elif message.startswith("FILE:"):
-            try:
-                _, file_num, file_data, max_file_num, request_cnt = message.split(":", 4)
-                file_num = int(file_num)
-                max_file_num = int(max_file_num)
-                request_cnt = int(request_cnt)
-                file_data = file_data.encode()  # 파일 데이터를 바이트 형식으로 변환
-
-                file_size_kb = len(file_data) // 1024  # 바이트를 KB로 변환
-
-                # Max 값을 업데이트
-                with cache_lock:
-                    if max_file_num > Max:
-                        Max = max_file_num
-                        print(f"Max 값이 {Max}로 업데이트되었습니다.")
-                    # 딕셔너리
-                    if cache_size + file_size_kb <= CACHE_CAPACITY_KB:
-                        # 파일 번호를 키로 하고, [file_data, request_cnt] 리스트를 값으로 저장
-                        cache[file_num] = [file_data, request_cnt]
-                        cache_size += file_size_kb
-                        print(f"파일 {file_num}을(를) 캐시에 저장했습니다. 현재 캐시 사용량: {cache_size} KB")
-                    else:
-                        print(f"캐시 용량 부족으로 파일 {file_num}을(를) 캐시에 저장하지 못했습니다.")
-            except ValueError as e:
-                print(f"파일 메시지 파싱 중 오류 발생: {e}")
+                    
     conn.close()
     print(f"클라이언트 연결 종료: {addr}")
 
@@ -306,11 +252,12 @@ if __name__ == "__main__":
     start_cache_server()
 
 # 해야할일
-# 캐시1은 홀수 캐시2는 짝수 파일 넘버를 관리
-# 파일 요청 시에도 캐시1은 홀수 파일 넘버의 파일을 요청해야하고
-# 캐시2는 짝수 파일 넘버의 파일을 데이터 서버에 요청한다.
 
 # receive data
 # starts with request ㅡ 클라이언트에게 요청을 받으면 캐시1은 홀수 파일을 클라이언트가 요청 하는데로 전송하고, 캐시2는 짝수 파일을 전송한다
 # request cnt가 0이 된 값은 delete를 하고
 # request cnt가 0이 될 때마다 delete되고 남아있는 딕셔너리의 키 값들을 더해서 용량 확인 계산을 한다
+
+# 데이터 서버가 25MB를 캐시 서버에 보낼건데 25씩 다 받아야된다
+# FLAG가 0일 떄는 request_from_data_server와 handle_client는 작동안한다
+# FLAG가 0일 때 25MB 씩 받는 걸 만들어야 한다
