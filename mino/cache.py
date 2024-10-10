@@ -47,17 +47,16 @@ def send_file(conn, file_num, file_data, file_size_kb, speed_kbps, request_cnt, 
         conn.sendall(chunk)
         sent_bytes += chunk_size
 
-    conn.sendall(f"MSG:파일 전송 완료 {file_size_kb} kb".encode())
+    conn.sendall(f"MSG:파일 전송 완료 {file_size_kb} kb\n".encode())
     # conn.sendall(file_data)  # 실제 파일 데이터 전송
 
-# 데이터 서버에서 파일을 요청하는 함수  <-이 부분에 Max + 2(홀 짝이니까)와 zero_request_list에 저장된 파일 번호의 총합(=파일의 사이즈 총합)이 데이터 서버로 부터 받을 파일의 크기보다 크다면 zero_request_list를 비우고, 데이터 서버에 새로운 파일을 요청한다.
+# 데이터 서버에서 파일을 요청하는 함수
 def request_from_data_server(file_num):
         global cache_size
 
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             s.connect((DATA_SERVER_HOST, DATA_SERVER_PORT))
-            s.sendall(f"REQUEST:{file_num}".encode())
 
             data = s.recv(4096)
             if not data:
@@ -130,23 +129,23 @@ def handle_client(conn, addr):
 
             # 파일 번호에 따른 캐시 서버 역할 확인
             if cache_server_number == 1 and file_num % 2 == 0:
-                conn.sendall(f"MSG:이 캐시 서버는 홀수 번호의 파일만 처리합니다.".encode())
+                conn.sendall(f"MSG:이 캐시 서버는 홀수 번호의 파일만 처리합니다.\n".encode())
                 continue
             elif cache_server_number == 2 and file_num % 2 != 0:
-                conn.sendall(f"MSG:이 캐시 서버는 짝수 번호의 파일만 처리합니다.".encode())
+                conn.sendall(f"MSG:이 캐시 서버는 짝수 번호의 파일만 처리합니다.\n".encode())
                 continue
         # 캐시에 있는지 확인
             with cache_lock:
                 if file_num in cache:
                     #캐시 히트
-                    conn.sendall("MSG:Cache Hit".encode())
+                    conn.sendall("MSG:Cache Hit\n".encode())
                     file_data, file_size_kb = cache[file_num]
                     file_size_kb = cache[file_num]
                     send_file(conn, file_data, file_size_kb, CACHE_TO_CLIENT_SPEED)
                     print(f"Cache Hit: {file_num}번 파일 캐시에서 {CACHE_TO_CLIENT_SPEED}로 전송")
                 else:
                     # 캐시 미스
-                    conn.sendall("MSG:Cache Miss".encode())
+                    conn.sendall("MSG:Cache Miss\n".encode())
                     print(f"Cache Miss: {file_num}번 파일 캐시에 없음, 데이터 서버로 요청")
 
         elif message.startswith("FILE:"):
