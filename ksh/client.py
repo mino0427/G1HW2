@@ -165,16 +165,16 @@ def start_client():
         #     request_file(file_num, cache_conns,data_server_conn)
         #     # 데이터, 캐시 서버와 연결 유지
 
-    while file_request_list:
-        if random.random() < 0.2:  # 20% 확률
-            file_num = file_request_list.pop(-1)  # 리스트에서 가장 큰 파일
-            print(f"20% 확률로 가장 큰 파일 {file_num} 요청 중...")
-        else:
-            file_num = file_request_list.pop(0)  # 리스트에서 가장 작은 파일
-            print(f"가장 작은 파일 {file_num} 요청 중...")
+        while file_request_list:
+            if random.random() < 0.2:  # 20% 확률
+                file_num = file_request_list.pop(-1)  # 리스트에서 가장 큰 파일
+                print(f"20% 확률로 가장 큰 파일 {file_num} 요청 중...")
+            else:
+                file_num = file_request_list.pop(0)  # 리스트에서 가장 작은 파일
+                print(f"가장 작은 파일 {file_num} 요청 중...")
 
-        # 파일 요청 처리
-        request_file(file_num, cache_conns, data_server_conn)
+            # 파일 요청 처리
+            request_file(file_num, cache_conns, data_server_conn)
 
 if __name__ == "__main__":
     start_client()
