@@ -197,7 +197,7 @@ def start_cache_server():
         data_server_conn.sendall("REQUEST_CACHE_SERVER_NUMBER".encode())
         response = data_server_conn.recv(1024).decode()
         if response.startswith("CACHE_SERVER_NUMBER:"):
-            _, number = response.strip().split(":")
+            _, number = response.split(":")
             cache_server_number = int(number)
             print(f"캐시 서버 번호 할당 받음: {cache_server_number}")
         else:
@@ -250,8 +250,7 @@ if __name__ == "__main__":
 # 캐시1은 홀수 캐시2는 짝수 파일 넘버를 관리
 
 # request from data server
-# 파일 요청 조건은
-# 캐시 서버 용량 - 캐시 딕셔너리의 키 값들의 합 > Max file num (용량 확인 계산)
+# 파일 요청 조건은 캐시 서버 용량 - 캐시 딕셔너리의 키 값들의 합 > Max file num (용량 확인 계산)
 # 데이터 서버에서 행렬이 0이아닌 최솟값을 파일 넘버만 받아서 캐시서버에 max file num으로 저장한다.
 # 용량확인 계산을 하고 조건을 만족했을 때 요청
 
