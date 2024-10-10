@@ -61,7 +61,8 @@ def request_from_data_server(file_num):
 
             if message.startswith("FILE:"):
                 # 파일 데이터 수신
-                header, file_data = message.split(":", 2)[0:2], data[len("FILE:{file_num}:".format(file_num=file_num)):]
+                header, file_num, file_data, max_file_num, request_cnt = message.split(":", 4)[0:4], data[len("FILE:{file_num}:".format(file_num=file_num)):]
+                # header, file_data = message.split(":", 2)[0:2], data[len("FILE:{file_num}:".format(file_num=file_num)):]
                 _, received_file_num = header.split(":")
                 received_file_num = int(received_file_num)
             
@@ -235,3 +236,4 @@ if __name__ == "__main__":
 # 해야할일
 # 데이터 서버에 파일을 요청할 때 조건 만들기 (25MB(캐시 서버 용량) - cache{} list에 모든 파일 번호들의 합 > Max + 2 일때, 데이터 서버에 파일 요청)
 # 데이터 서버에서 파일 중복 개수(count)가 0이 될 때마다, Max + 2를 다운 받을 수 있는지 확인한다
+# 딕셔너리 키값 계산 법 -> cache_key_sum (변수명) = sum(cache.keys())
