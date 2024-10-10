@@ -108,6 +108,7 @@ def request_from_data_server(file_num):
         with data_server_lock:
             try:
                 data_server_socket.sendall(f"REQUEST:{file_num}".encode())
+                print(f"데이터 서버에 {file_num}번 파일 요청 전송")
                 # 데이터 서버로부터 파일 수신
                 data = receive_data(data_server_socket)
 
@@ -305,18 +306,7 @@ if __name__ == "__main__":
     start_cache_server()
 
 # 해야할일
-# 데이터 서버에 파일을 요청할 때 조건 만들기
-# (25MB(캐시 서버 용량) - cache{} list에 모든 파일 번호들의 합 > max_file_num
-# 데이터 서버에서 받은 max_file_num(데이터 서버에서는 최솟값)
-# 데이터 서버에서 파일 중복 개수(count)가 0이 될 때마다, max_file_num를 다운 받을 수 있는지 확인한다
-# 딕셔너리 키값 계산 법 -> cache_key_sum (변수명) = sum(cache.keys())
 # 캐시1은 홀수 캐시2는 짝수 파일 넘버를 관리
-
-# request from data server
-# 파일 요청 조건은 캐시 서버 용량 - 캐시 딕셔너리의 키 값들의 합 > Max file num (용량 확인 계산)
-# 데이터 서버에서 행렬이 0이아닌 최솟값을 파일 넘버만 받아서 캐시서버에 max file num으로 저장한다.
-# 용량확인 계산을 하고 조건을 만족했을 때 요청
-
 # 파일 요청 시에도 캐시1은 홀수 파일 넘버의 파일을 요청해야하고
 # 캐시2는 짝수 파일 넘버의 파일을 데이터 서버에 요청한다.
 
