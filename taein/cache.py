@@ -102,7 +102,7 @@ def receive_max_file_num():
 
 
 # 데이터 서버에서 파일을 요청하는 함수
-def request_from_data_server(file_num): ######################없어도 될거
+def request_from_data_server(): ######################없어도 될거
         global cache_size, Max, FLAG
         free_space = CACHE_CAPACITY_KB - cache_size
 
@@ -288,6 +288,10 @@ def start_cache_server():
     except Exception as e:
         print(f"데이터 서버 연결 중 예외 발생: {e}")
         return
+    
+    ###################cache 초기화################################################################3333    
+    thread = threading.Thread(target=request_from_data_server)
+    thread.start()
         
         
      #########################################데이터 서버와 연결 완료 시점######################################3
@@ -302,9 +306,6 @@ def start_cache_server():
         thread.start()
     
     #################데이터 서버와 클라이언트 모두 연결 완료 시점####################################################################################
-    
-    thread = threading.Thread(target=request_from_data_server, args=(conn, addr))
-    thread.start()
 
 if __name__ == "__main__":
     start_cache_server()
