@@ -202,7 +202,6 @@ def request_processing(conn, addr):
             while '\n' in data:
                 # '\n'을 기준으로 메시지를 분리
                 message, data = data.split('\n', 1)
-
                 # 요청 메시지 형식 구분: REQUEST로 시작하는 파일 요청
                 if message.startswith("REQUEST:"):
                     _, file_num_str = message.split(":")  # "REQUEST:file_num" 형식
@@ -227,12 +226,14 @@ def request_processing(conn, addr):
                     _, random_list_str = message.split(":", 1)  # "RANDOM:random_list" 형식
                     random_list = random_list_str.split(",")  # 쉼표로 구분된 random_list 받기
                     random_list = [int(num) for num in random_list]  # 파일 번호 목록을 정수로 변환
-                    print(f"데이터 서버: {addr}로부터 랜덤 파일 목록 수신: {random_list[:10]}... (총 {len(random_list)}개 파일)")
+                    #print(f"데이터 서버: {addr}로부터 랜덤 파일 목록 수신: {random_list[:10]}... (총 {len(random_list)}개 파일)")
 
                     # random_list를 참고하여 data_array 업데이트
                     for file_num in random_list:
                         data_array[file_num] += 1  # 파일 번호에 해당하는 요청 횟수 증가
                         processed_file += 1
+                    print("검문좀 하겠습니다.")
+                    
                     
                     if processed_file == 4000:
                         set_cache()
@@ -243,7 +244,7 @@ def request_processing(conn, addr):
                     continue
 
         except ValueError:
-            print(f"잘못된 파일 번호 수신: {data}")
+            print(f"잘못된 파일 번호 수신: {_}")
             continue
 
     conn.close()
