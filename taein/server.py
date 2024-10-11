@@ -249,13 +249,14 @@ def request_processing(conn, addr):
     conn.close()
 
 
-# 캐시 서버 연결 처리 함수
-def handle_cache_server(conn, addr):
-    print(f"연결된 캐시 서버: {addr}")
-    port = conn.recv(1024).decode()  # 캐시 서버의 포트 번호를 받음
-    cache_servers.append((addr[0], port, conn))  # 캐시 서버 정보 저장
+# # 캐시 서버 연결 처리 함수
+# def handle_cache_server(conn, addr):
+#     print(f"연결된 캐시 서버: {addr}")
+#     port =int(conn.recv(1024).decode())  # 캐시 서버의 포트 번호를 받음
     
-    # 캐시 서버에 대한 추가 처리 가능?????????????????????????여기 뭐 넣는 거였지?????????????????????????????????????
+#     cache_servers.append((addr[0], port, conn))  # 캐시 서버 정보 저장
+#     print(cache_servers)
+#     # 캐시 서버에 대한 추가 처리 가능?????????????????????????여기 뭐 넣는 거였지?????????????????????????????????????
 
     
 def send_flag_to_all():
@@ -290,8 +291,12 @@ def start_server():
     for i in range(2):  # 캐시 서버 2개 연결
         conn, addr = server.accept()
         print(f"캐시 서버 {i + 1} 연결 완료: {addr}")
-        thread = threading.Thread(target=handle_cache_server, args=(conn, addr))
-        thread.start()#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1나중에 handle_cache를 수정하고 나서 스레드 한번 더 생각해보자
+        #thread = threading.Thread(target=handle_cache_server, args=(conn, addr))
+        #thread.start()#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1나중에 handle_cache를 수정하고 나서 스레드 한번 더 생각해보자
+        #     print(f"연결된 캐시 서버: {addr}")
+        port =int(conn.recv(1024).decode())  # 캐시 서버의 포트 번호를 받음
+        cache_servers.append((addr[0], port, conn))  # 캐시 서버 정보 저장
+        print(cache_servers)
         thread = threading.Thread(target=request_processing, args=(conn, addr))
         thread.start()
 
@@ -306,6 +311,8 @@ def start_server():
         print(f"클라이언트 연결 완료: {addr}")
 
         # 클라이언트에게 캐시 서버 정보를 전송
+        print(cache_servers[0])
+        print(cache_servers[1])
         conn.sendall(f"{cache_servers[0]}:{cache_servers[1]}".encode())
 
     # 4개의 클라이언트가 연결된 후에 요청 처리 시작

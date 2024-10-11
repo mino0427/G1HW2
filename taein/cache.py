@@ -11,9 +11,9 @@ DATA_SERVER_PORT = 5000
 CACHE_TO_CLIENT_SPEED = 3000
 DATA_TO_CACHE_SPEED = 2000 
 
-# 캐시 서버 번호 및 최대 캐시 서버 수
-MAX_CACHE_SERVERS = 2
-cache_server_number = None  # 캐시 서버 번호 (1 또는 2)
+# # 캐시 서버 번호 및 최대 캐시 서버 수
+# MAX_CACHE_SERVERS = 2
+# cache_server_number = None  # 캐시 서버 번호 (1 또는 2)
 
 # 캐시 서버 안에 있는 가장 큰 파일 번호(크기)
 Max = 0
@@ -102,7 +102,7 @@ def receive_max_file_num():
 
 
 # 데이터 서버에서 파일을 요청하는 함수
-def request_from_data_server(): ##################file_num####없어도 될거 같은데########################
+def request_from_data_server(file_num): ######################없어도 될거
         global cache_size, Max, FLAG
         free_space = CACHE_CAPACITY_KB - cache_size
 
@@ -260,21 +260,21 @@ def start_cache_server():
     
     try:
     # 데이터 서버로부터 캐시 서버 번호 할당
-        data_server_socket.sendall("REQUEST_CACHE_SERVER_NUMBER".encode())
-        response = data_server_socket.recv(1024).decode()
-        if response.startswith("CACHE_SERVER_NUMBER:"):
-            _, number = response.split(":")
-            cache_server_number = int(number)
-            print(f"캐시 서버 번호 할당 받음: {cache_server_number}")
-        else:
-            print("캐시 서버 번호를 할당받지 못했습니다.")
-            data_server_socket.close()
-            return
+        # data_server_socket.sendall("REQUEST_CACHE_SERVER_NUMBER".encode())#######################
+        # response = data_server_socket.recv(1024).decode()
+        # if response.startswith("CACHE_SERVER_NUMBER:"):
+        #     _, number = response.split(":")
+        #     cache_server_number = int(number)
+        #     print(f"캐시 서버 번호 할당 받음: {cache_server_number}")
+        # else:
+        #     print("캐시 서버 번호를 할당받지 못했습니다.")
+        #     data_server_socket.close()
+        #     return
 
-        if cache_server_number > MAX_CACHE_SERVERS:
-            print(f"최대 캐시 서버 수({MAX_CACHE_SERVERS})를 초과했습니다.")
-            data_server_socket.close()
-            return
+        # # if cache_server_number > MAX_CACHE_SERVERS:
+        # #     print(f"최대 캐시 서버 수({MAX_CACHE_SERVERS})를 초과했습니다.")
+        # #     data_server_socket.close()
+        # #     return
 
         # 캐시 서버 소켓 설정 (자동 포트 할당)
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -283,7 +283,7 @@ def start_cache_server():
         print(f"캐시 서버의 할당된 포트 번호: {cache_port}")
 
         # 데이터 서버에 캐시 서버 포트 번호 전송
-        data_server_socket.sendall(f"CACHE_SERVER_INFO:{cache_port}".encode())
+        data_server_socket.sendall(f"{cache_port}".encode())
 
     except Exception as e:
         print(f"데이터 서버 연결 중 예외 발생: {e}")
@@ -294,7 +294,7 @@ def start_cache_server():
         
     # 캐시 서버 실행
     server.listen()
-    print(f"Cache_server {cache_server_number}가 {HOST}:{cache_port}에서 실행 중입니다.")
+    print(f"Cache_server가 {HOST}:{cache_port}에서 실행 중입니다.")
 
     for i in range(0,4):#####수정함 이렇게 해도 되겠지?#####################여기서 4개 받고 끝이 아니라 계속 accept 대기 하고 있는 건가?#########
         conn, addr = server.accept()
@@ -303,7 +303,7 @@ def start_cache_server():
     
     #################데이터 서버와 클라이언트 모두 연결 완료 시점####################################################################################
     
-    thread = threading.Thread(target=request_from_data_server)
+    thread = threading.Thread(target=request_from_data_server, args=(conn, addr))
     thread.start()
 
 if __name__ == "__main__":
