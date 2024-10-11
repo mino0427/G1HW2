@@ -71,7 +71,8 @@ def identify_connection(conn):
 
 # 파일 전송 시간 계산 및 전송 처리 함수
 def send_file(conn, file_num, file_size_kb, speed_kbps):
-    
+    global processed_file
+
     # 캐시, 클라이언트에 따라 data_array 업데이트 하기
     node = identify_connection(conn)
 
@@ -94,10 +95,10 @@ def send_file(conn, file_num, file_size_kb, speed_kbps):
         Max[1] = file_num
 
     # 헤더 메시지 생성
-    header_message = f"FILE:{file_num}"
-    
+    header_message = f"FILE:{file_num}:".encode()
+
     # tail 메시지 생성
-    tail_message = f"{max_file_num}:{request_cnt}"
+    tail_message = f":{max_file_num}:{request_cnt}".encode()
 
     # 전체 전송 크기 계산
     total_bytes = file_size_kb * 1024 // 8  # 가상 파일의 크기를 바이트로 변환
@@ -107,22 +108,19 @@ def send_file(conn, file_num, file_size_kb, speed_kbps):
 
     time.sleep(transfer_time)  # 전송 시간 동안 대기
 
-    # 파일 데이터는 전송 시에만 동적으로 생성 (가상 데이터)
+    # 전체 메시지 생성 (헤더 + 파일 데이터 + tail 메시지)
+    file_data = b'X' * total_bytes  # 'X'를 바이트로 변환
+    full_message = header_message + file_data + tail_message  # 모든 부분을 바이트로 결합
+
+
+    # full_message를 청크 단위로 전송
     sent_bytes = 0
-
-    # 헤더와 tail_message를 먼저 보냄
-    conn.sendall(f"{header_message}\n".encode())  # 헤더 전송
-    print(f"헤더 전송 완료: {header_message}")
-
-    # 청크 단위로 파일 데이터 전송
-    while sent_bytes < total_bytes:
-        chunk_size = min(4096, total_bytes - sent_bytes)  # 한 번에 보낼 청크 크기 계산
-        chunk = b'X' * chunk_size  # 동적으로 가상 데이터 생성 ('X'로 채운 청크)
+    while sent_bytes < len(full_message):
+        chunk_size = min(4096, len(full_message) - sent_bytes)  # 한 번에 보낼 청크 크기 계산
+        chunk = full_message[sent_bytes:sent_bytes + chunk_size]  # 청크 데이터 추출
         conn.sendall(chunk)  # 청크 전송
         sent_bytes += chunk_size
 
-    # tail 메시지 전송
-    conn.sendall(f"\n{tail_message}\n".encode())
     print(f"파일 전송 완료: 파일 번호 {file_num}, 크기 {file_size_kb} KB, 실제 소요 시간 {transfer_time:.2f}초")
 
     # 모든 파일이 처리되었는지 확인 후 종료 처리
@@ -152,6 +150,7 @@ def set_cache(): #홀짝캐시에게 25MB만큼의 데이터 전송하기
                 total_mb_sent_even += file_size_mb  # 전송한 데이터 크기 업데이트          
                 
             else:
+                print("짝수 cacahe 초기 세팅 완료!!!!!!!!!!!!")
                 break  # 25MB를 넘으면 중단
 
     # 홀수 인덱스부터 시작해서 캐시로 파일 보내기
@@ -166,6 +165,7 @@ def set_cache(): #홀짝캐시에게 25MB만큼의 데이터 전송하기
                 total_mb_sent_odd += file_size_mb  # 전송한 데이터 크기 업데이트          
                 
             else:
+                print("홀수 cacahe 초기 세팅 완료!!!!!!!!!!!!")
                 break  # 25MB를 넘으면 중단
 
     print("캐시 서버로 25MB 이내의 파일을 전송 완료했습니다.")
@@ -188,7 +188,7 @@ def receive_data(socket):
 
 def request_processing(conn, addr): 
     global data_array  # 전역 변수를 함수 내에서 사용하기 위해 선언
-
+    global processed_file
     print(f"연결된 {addr}로부터 파일 요청 처리 시작")
 
     while FLAG:
@@ -224,7 +224,7 @@ def request_processing(conn, addr):
                 # RANDOM:random_list 메시지 처리
                 elif message.startswith("RANDOM:"):
                     _, random_list_str = message.split(":", 1)  # "RANDOM:random_list" 형식
-                    random_list = random_list_str.split(",")  # 쉼표로 구분된 random_list 받기
+                    random_list = random_list_str.split(":")  # 쉼표로 구분된 random_list 받기
                     random_list = [int(num) for num in random_list]  # 파일 번호 목록을 정수로 변환
                     #print(f"데이터 서버: {addr}로부터 랜덤 파일 목록 수신: {random_list[:10]}... (총 {len(random_list)}개 파일)")
 
