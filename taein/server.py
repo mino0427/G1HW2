@@ -22,15 +22,14 @@ next_min = [None, None]  # next_min은 캐시에게 보낼 다음 파일 번호(
 processed_file=0
 
 virtual_files_lock = threading.Lock()
-# 가상 파일 생성
+
 def create_virtual_files():
-    print("가상 파일 생성 시작...")
+    print("가상 파일 크기 정보 생성 시작...")
     with virtual_files_lock:
         for file_num in range(1, 100001):
             file_size_kb = file_num  # 파일 크기는 1 ~ 100,000 KB
-            file_data = 'X' * (file_size_kb * 1024)  # 파일 크기만큼 가상 데이터 생성 (1KB = 1024바이트)
-            virtual_files[file_num] = file_data  # 파일 데이터 저장
-    print(f"총 {len(virtual_files)}개의 가상 파일 생성 완료!")
+            virtual_files[file_num] = file_size_kb  # 파일 크기만 저장 (KB 단위)
+    print(f"총 {len(virtual_files)}개의 가상 파일 크기 정보 생성 완료!")
 
 
 def send_next_file_num(conn):#캐시가 받아야할 다음 파일 정보를 알려주기 위함
@@ -73,59 +72,65 @@ def identify_connection(conn):
 # 파일 전송 시간 계산 및 전송 처리 함수
 def send_file(conn, file_num, file_size_kb, speed_kbps):
     
-    #캐시, 클라이언트에 따라 data_array 업데이트 하기
-    node=identify_connection(conn)
+    # 캐시, 클라이언트에 따라 data_array 업데이트 하기
+    node = identify_connection(conn)
 
-    if node=="client":
-        processed_file-=-1
-        data_array[file_num]-=1
+    if node == "client":
+        processed_file += 1
+        data_array[file_num] -= 1
     else:
-        processed_file-=data_array[file_num]
-        data_array[file_num]=0
-    
-    # 가상 파일 데이터 가져오기
-    file_data = virtual_files[file_num]  # 이미 생성된 가상 파일 데이터 가져옴
+        processed_file -= data_array[file_num]
+        data_array[file_num] = 0
 
-    #파일 요청 횟수 생성
-    request_cnt=data_array[file_num]
+    # 파일 요청 횟수 생성
+    request_cnt = data_array[file_num]
 
-    #max_file_num 생성 및 Max값 업데이트
-    if(file_num%2==0):
-        max_file_num=Max[0]
-        Max[0]=file_num
+    # max_file_num 생성 및 Max값 업데이트
+    if file_num % 2 == 0:
+        max_file_num = Max[0]
+        Max[0] = file_num
     else:
-        max_file_num=Max[1]
-        Max[1]=file_num
+        max_file_num = Max[1]
+        Max[1] = file_num
+
     # 헤더 메시지 생성
     header_message = f"FILE:{file_num}"
     
-    #tail 메시지 생성
-    tail_message=f"{max_file_num}:{request_cnt}"
+    # tail 메시지 생성
+    tail_message = f"{max_file_num}:{request_cnt}"
 
-    # 헤더와 파일 데이터를 결합한 전체 메시지에 \n 추가
-    full_message = header_message + file_data + tail_message+"\n"  # 전체 메시지에 \n 추가
+    # 전체 전송 크기 계산
+    total_bytes = file_size_kb * 1024 // 8  # 가상 파일의 크기를 바이트로 변환
 
     transfer_time = file_size_kb / speed_kbps  # 전송에 필요한 시간 계산
     print(f"파일 전송 시작: 파일 번호 {file_num}, 크기 {file_size_kb} KB, 예상 소요 시간 {transfer_time:.2f}초")
 
     time.sleep(transfer_time)  # 전송 시간 동안 대기
 
-    # 전체 메시지를 청크 단위로 전송
-    total_bytes = len(full_message)
+    # 파일 데이터는 전송 시에만 동적으로 생성 (가상 데이터)
     sent_bytes = 0
 
+    # 헤더와 tail_message를 먼저 보냄
+    conn.sendall(f"{header_message}\n".encode())  # 헤더 전송
+    print(f"헤더 전송 완료: {header_message}")
+
+    # 청크 단위로 파일 데이터 전송
     while sent_bytes < total_bytes:
         chunk_size = min(4096, total_bytes - sent_bytes)  # 한 번에 보낼 청크 크기 계산
-        chunk = full_message[sent_bytes:sent_bytes + chunk_size].encode()  # 청크 데이터 추출 및 인코딩
+        chunk = b'X' * chunk_size  # 동적으로 가상 데이터 생성 ('X'로 채운 청크)
         conn.sendall(chunk)  # 청크 전송
         sent_bytes += chunk_size
 
+    # tail 메시지 전송
+    conn.sendall(f"\n{tail_message}\n".encode())
     print(f"파일 전송 완료: 파일 번호 {file_num}, 크기 {file_size_kb} KB, 실제 소요 시간 {transfer_time:.2f}초")
 
-    if processed_file<=0:
+    # 모든 파일이 처리되었는지 확인 후 종료 처리
+    if processed_file <= 0:
         if all(value == 0 for value in data_array):
-            FLAG=0
+            FLAG = 0
             send_flag_to_all()
+
 
 def set_cache(): #홀짝캐시에게 25MB만큼의 데이터 전송하기
     total_mb_sent_even = 0  # 짝수 캐시에게 보낸 총 데이터 크기 (MB)
@@ -165,26 +170,38 @@ def set_cache(): #홀짝캐시에게 25MB만큼의 데이터 전송하기
 
     print("캐시 서버로 25MB 이내의 파일을 전송 완료했습니다.")
 
+# 데이터를 청크 단위로 받는 함수
+def receive_data(socket):
+    data = b''
+    while True:
+        try:
+            chunk = socket.recv(4096).decode()
+            if not chunk:
+                break
+            data += chunk.encode()  # 문자열을 다시 바이트로 변환하여 추가
+            # 메시지 끝을 확인하기 위해 줄바꿈을 사용
+            if '\n' in chunk:
+                break
+        except:
+            break
+    return data.decode()
+
 def request_processing(conn, addr): 
     global data_array  # 전역 변수를 함수 내에서 사용하기 위해 선언
 
     print(f"연결된 {addr}로부터 파일 요청 처리 시작")
 
-    buffer = ""  # 받은 데이터를 일시적으로 저장할 버퍼
-
     while FLAG:
         try:
-            # 4096 바이트 단위로 데이터 수신
-            data_chunk = conn.recv(4096).decode()
-            if not data_chunk:
+            # 데이터를 청크 단위로 수신
+            data = receive_data(conn)
+            if not data:
                 break  # 연결이 종료되면 루프 탈출
 
-            buffer += data_chunk  # 버퍼에 받은 데이터 추가
-
-            # '\n'이 메시지의 끝을 의미하므로, 이를 기준으로 메시지 분리
-            while '\n' in buffer:
+            # '\n'이 메시지의 끝을 의미하므로 이를 기준으로 메시지 처리
+            while '\n' in data:
                 # '\n'을 기준으로 메시지를 분리
-                message, buffer = buffer.split('\n', 1)
+                message, data = data.split('\n', 1)
 
                 # 요청 메시지 형식 구분: REQUEST로 시작하는 파일 요청
                 if message.startswith("REQUEST:"):
@@ -199,7 +216,7 @@ def request_processing(conn, addr):
                             print(f"데이터 서버: {file_num}번 파일을 전송 준비 중 (크기: {file_size_kb} KB)")
 
                             # send_file 함수를 사용하여 파일 전송
-                            send_file(conn,file_num, file_size_kb, DATA_TO_CLIENT_SPEED)
+                            send_file(conn, file_num, file_size_kb, DATA_TO_CLIENT_SPEED)
 
                         else:
                             print(f"데이터 서버: {file_num}번 파일을 찾을 수 없음")
@@ -215,23 +232,22 @@ def request_processing(conn, addr):
                     # random_list를 참고하여 data_array 업데이트
                     for file_num in random_list:
                         data_array[file_num] += 1  # 파일 번호에 해당하는 요청 횟수 증가
-                        processed_file+=1
+                        processed_file += 1
                     
-                    if processed_file==4000:
+                    if processed_file == 4000:
                         set_cache()
                         send_flag_to_all()
                         
                 else:
                     print(f"잘못된 요청 형식 수신: {message}")
-                    #conn.sendall("잘못된 요청입니다.".encode())
                     continue
 
         except ValueError:
-            print(f"잘못된 파일 번호 수신: {data_chunk}")
-            #conn.sendall("잘못된 요청입니다.".encode())
+            print(f"잘못된 파일 번호 수신: {data}")
             continue
 
     conn.close()
+
 
 # 캐시 서버 연결 처리 함수
 def handle_cache_server(conn, addr):
@@ -239,13 +255,15 @@ def handle_cache_server(conn, addr):
     port = conn.recv(1024).decode()  # 캐시 서버의 포트 번호를 받음
     cache_servers.append((addr[0], port, conn))  # 캐시 서버 정보 저장
     
-    # 캐시 서버에 대한 추가 처리 가능
+    # 캐시 서버에 대한 추가 처리 가능?????????????????????????여기 뭐 넣는 거였지?????????????????????????????????????
 
     
 def send_flag_to_all():
     # 모든 캐시 서버에 FLAG 메시지 전송
     for cache_server in cache_servers:
         cache_server[2].sendall(f"FLAG:{FLAG}\n".encode())  # cache_server[2]는 conn 객체
+        thread = threading.Thread(target=send_next_file_num, args=(cache_server[2]))
+        thread.start()
 
     if(FLAG==1):
         # 모든 클라이언트에 FLAG 메시지 전송
@@ -253,6 +271,7 @@ def send_flag_to_all():
             client_conn[0].sendall(f"FLAG:{FLAG}\n".encode())  # client_conn[0]는 conn 객체
         
     print(f"모든 캐시 서버와 클라이언트에게 FLAG:{FLAG} 메시지를 전송했습니다.")
+
 
 
 def start_server():
