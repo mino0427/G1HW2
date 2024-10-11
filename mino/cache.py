@@ -24,7 +24,6 @@ CACHE_CAPACITY_KB = 25 * 1024  # 25MB를 KB로 변환
 
 cache = {}
 cache_size = 0  # 현재 캐시 사용량 (KB)
-cache_key_sum = 0  # 캐시의 키 값들의 합
 
 # 데이터 서버 연결 설정
 data_server_socket = None
@@ -46,7 +45,7 @@ def connect_to_data_server(host, port):
 
 # 파일 전송 시간 계산 및 전송 처리
 def send_file(conn, file_num, file_data, file_size_kb, speed_kbps, request_cnt, max_file_num):
-    global cache_key_sum, cache_size
+    global cache_size
 
     # 파일 전송 메시지 생성
     header_message = f"FILE:{file_num}"
@@ -71,17 +70,20 @@ def send_file(conn, file_num, file_data, file_size_kb, speed_kbps, request_cnt, 
     # request_cnt 감소 및 캐시 정리
     with cache_lock:
         if file_num in cache:
+            # 캐시에서 파일 데이터와 정보를 가져옴
+            file_data, file_size_kb, request_cnt = cache[file_num]
             # request_cnt 값을 1 감소
-            current_file_size = cache[file_num]
             request_cnt -= 1
             print(f"파일 {file_num}의 request_cnt 감소: {request_cnt}")
 
             # request_cnt가 0이면 캐시에서 해당 파일 삭제
             if request_cnt <= 0:
                 del cache[file_num]
-                cache_size -= current_file_size
-                cache_key_sum -= file_num  # 파일 번호를 뺌
+                cache_size -= file_size_kb
                 print(f"파일 {file_num}의 request_cnt가 0이 되어 캐시에서 제거되었습니다. 현재 캐시 사용량: {cache_size} KB")
+            else:
+                # request_cnt 업데이트
+                cache[file_num] = (file_data, file_size_kb, request_cnt)
 
 def receive_max_file_num():
     global Max, FLAG
@@ -103,7 +105,7 @@ def receive_max_file_num():
 
 # 데이터 서버에서 파일을 요청하는 함수
 def request_from_data_server(file_num):
-        global cache_size, cache_key_sum, Max, FLAG
+        global cache_size, Max, FLAG
         free_space = CACHE_CAPACITY_KB - cache_size
 
         try:
@@ -113,9 +115,8 @@ def request_from_data_server(file_num):
 
             if file_data:
                 with cache_lock:
-                    cache[file_num] = (file_data, file_size_kb)
+                    cache[file_num] = (file_data, file_size_kb, request_cnt)
                     cache_size += file_size_kb
-                    cache_key_sum += file_num
                     print(f"초기 25MB 파일을 캐시에 저장했습니다. 현재 캐시 사용량: {cache_size} KB")
             else:
                 print("초기 25MB 파일 수신 실패")
@@ -171,9 +172,8 @@ def request_from_data_server(file_num):
                                 # 캐시 용량 검사 및 파일 저장
                                     with cache_lock:
                                         if cache_size + file_size_kb <= CACHE_CAPACITY_KB:
-                                            cache[file_num] = (file_data, file_size_kb)
+                                            cache[file_num] = (file_data, file_size_kb, request_cnt)
                                             cache_size += file_size_kb
-                                            cache_key_sum += file_num  # 파일 번호를 더함
                                             print(f"파일 {file_num}을(를) 캐시에 저장했습니다. 현재 캐시 사용량: {cache_size} KB")
                                         else:
                                             print(f"캐시 용량 부족으로 파일 {file_num}을(를) 캐시에 저장하지 못했습니다.")
@@ -225,9 +225,9 @@ def handle_client(conn, addr):
             with cache_lock:
                 if file_num in cache:
                     #캐시 히트
+                    file_data, file_size_kb, request_cnt = cache[file_num]
                     conn.sendall("MSG:Cache Hit\n".encode())
-                    file_data, file_size_kb = cache[file_num]
-                    file_size_kb = cache[file_num]
+                    # file_size_kb = cache[file_num]
                     send_file(conn, file_data, file_size_kb, CACHE_TO_CLIENT_SPEED)
                     print(f"Cache Hit: {file_num}번 파일 캐시에서 {CACHE_TO_CLIENT_SPEED}로 전송")
                 else:
@@ -299,11 +299,3 @@ def start_cache_server():
 
 if __name__ == "__main__":
     start_cache_server()
-
-# 해야할일
-# request cnt가 0이 된 값은 delete를 하고
-# request cnt가 0이 될 때마다 delete되고 남아있는 딕셔너리의 키 값들을 더해서 용량 확인 계산을 한다
-
-# 데이터 서버가 25MB를 캐시 서버에 보낼건데 25씩 다 받아야된다
-# FLAG가 0일 떄는 request_from_data_server와 handle_client는 작동안한다
-# FLAG가 0일 때 25MB 씩 받는 걸 만들어야 한다
