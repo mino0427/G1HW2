@@ -202,8 +202,17 @@ def handle_client(conn, addr):
     global FLAG
     print(f"연결된 클라이언트: {addr}")
     ###############################FLAG가 0인 경우 그냥 이 부분을 넘어가버림#############수정필요################
-    FLAG = receive_data(data_server_socket)## 내가 수정한 부분
-    if FLAG:
+    # FLAG = receive_data(data_server_socket)## 내가 수정한 부분
+
+    # 데이터를 수신하여 FLAG 값을 확인
+    FLAG_msg = receive_data(conn)
+    FLAG_msg = FLAG_msg.decode()  # bytes를 str로 변환
+    
+    if FLAG_msg.startswith("FLAG:"):
+        _, FLAG = FLAG_msg.split(":")
+        FLAG = int(FLAG)
+
+    if FLAG == 1:
         print("데이터 서버에서 FLAG:1 수신. 파일 요청 시작.")
 
         while FLAG:
