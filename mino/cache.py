@@ -89,6 +89,26 @@ def request_from_data_server(): ######################없어도 될거
                 file_size_kb = 25 * 1024  # 25MB를 KB로 변환
                 file_data = receive_data(data_server_socket)
 
+                # file 데이터로 받아야됌
+                if message.startswith("FILE:"):
+                    # 파일 데이터 수신
+                    try:
+                        _, file_num, file_data, max_file_num, request_cnt = message.split(":", 4)[0:4], data[len("FILE:{file_num}:".format(file_num=file_num)):]
+                        received_file_num = int(received_file_num)
+                        max_file_num = int(max_file_num)
+                        request_cnt = int(request_cnt)
+                        file_data = file_data.encode()
+                
+                        if received_file_num != file_num:
+                            print(f"받은 파일 번호가 요청한 파일 번호와 다릅니다.")
+                            return None, None
+
+                        file_size_kb = len(file_data) // 1024  # 바이트를 KB로 변환
+                        Max = max_file_num
+                    
+                    except Exception as e:
+                        print(f"데이터 서버에서 파일 수신 중 오류")
+
                 if file_data:
                     with cache_lock:
                         cache[file_num] = (file_data, file_size_kb, request_cnt)
