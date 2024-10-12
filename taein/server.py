@@ -62,13 +62,13 @@ def identify_connection(conn):
     # cache_servers 리스트에서 conn이 있는지 확인
     for cache_server in cache_servers:
         if cache_server[2] == conn:  # cache_servers에서 conn과 비교
-            print("이 연결은 캐시 서버입니다.")
+
             return "cache_server"
     
     # client_conns 리스트에서 conn이 있는지 확인
     for client_conn in client_conns:
         if client_conn[0] == conn:  # client_conns에서 conn과 비교
-            print("이 연결은 클라이언트입니다.")
+
             return "client"
     
     # 리스트에서 찾을 수 없는 경우
@@ -236,47 +236,47 @@ def request_processing(conn, addr):
                 break  # 연결이 종료되면 루프 탈출
 
             # '\n'이 메시지의 끝을 의미하므로 이를 기준으로 메시지 처리
-            while FLAG:
-                # 요청 메시지 형식 구분: REQUEST로 시작하는 파일 요청
-                if message.startswith("REQUEST:"):
-                    _, file_num_str = message.split(":")  # "REQUEST:file_num" 형식
-                    file_num = int(file_num_str)
-                    print(f"데이터 서버: {addr}로부터 {file_num}번 파일 요청 수신")
+            
+            # 요청 메시지 형식 구분: REQUEST로 시작하는 파일 요청
+            if message.startswith("REQUEST:"):
+                _, file_num_str = message.split(":")  # "REQUEST:file_num" 형식
+                file_num = int(file_num_str)
+                print(f"데이터 서버: {addr}로부터 {file_num}번 파일 요청 수신")
 
-                    # 요청한 파일의 크기 계산 및 전송 처리
-                    with virtual_files_lock:
-                        if file_num in virtual_files:
-                            file_size_kb = file_num  # 파일 크기(KB) 계산
-                            print(f"데이터 서버: {file_num}번 파일을 전송 준비 중 (크기: {file_size_kb} KB)")
+                # 요청한 파일의 크기 계산 및 전송 처리
+                with virtual_files_lock:
+                    if file_num in virtual_files:
+                        file_size_kb = file_num  # 파일 크기(KB) 계산
+                        print(f"데이터 서버: {file_num}번 파일을 전송 준비 중 (크기: {file_size_kb} KB)")
 
-                            # send_file 함수를 사용하여 파일 전송
-                            send_file(conn, file_num, file_size_kb, DATA_TO_CLIENT_SPEED)
+                        # send_file 함수를 사용하여 파일 전송
+                        send_file(conn, file_num, file_size_kb, DATA_TO_CLIENT_SPEED)
 
-                        else:
-                            print(f"데이터 서버: {file_num}번 파일을 찾을 수 없음")
-                            #conn.sendall(f"파일을 찾을 수 없습니다: {file_num}".encode())
+                    else:
+                        print(f"데이터 서버: {file_num}번 파일을 찾을 수 없음")
+                        #conn.sendall(f"파일을 찾을 수 없습니다: {file_num}".encode())
 
-                # RANDOM:random_list 메시지 처리
-                elif message.startswith("RANDOM:"):
-                    _, random_list_str = message.split(":", 1)  # "RANDOM:random_list" 형식
-                    random_list = random_list_str.split(":")  # 쉼표로 구분된 random_list 받기
-                    random_list = [int(num) for num in random_list]  # 파일 번호 목록을 정수로 변환
-                    #print(f"데이터 서버: {addr}로부터 랜덤 파일 목록 수신: {random_list[:10]}... (총 {len(random_list)}개 파일)")
+            # RANDOM:random_list 메시지 처리
+            elif message.startswith("RANDOM:"):
+                _, random_list_str = message.split(":", 1)  # "RANDOM:random_list" 형식
+                random_list = random_list_str.split(":")  # 쉼표로 구분된 random_list 받기
+                random_list = [int(num) for num in random_list]  # 파일 번호 목록을 정수로 변환
+                #print(f"데이터 서버: {addr}로부터 랜덤 파일 목록 수신: {random_list[:10]}... (총 {len(random_list)}개 파일)")
 
-                    # random_list를 참고하여 data_array 업데이트
-                    for file_num in random_list:
-                        data_array[file_num] += 1  # 파일 번호에 해당하는 요청 횟수 증가
-                        processed_file += 1
+                # random_list를 참고하여 data_array 업데이트
+                for file_num in random_list:
+                    data_array[file_num] += 1  # 파일 번호에 해당하는 요청 횟수 증가
+                    processed_file += 1
 
+                print(processed_file)
+                
+                if processed_file == 4000:
+                    set_cache()
+                    send_flag_to_all()
                     
-                    
-                    if processed_file == 4000:
-                        set_cache()
-                        send_flag_to_all()
-                        
-                else:
-                    print(f"잘못된 요청 형식 수신: {message}")
-                    continue
+            else:
+                print(f"잘못된 요청 형식 수신: {message}")
+                continue
 
         except ValueError:
             print(f"잘못된 파일 번호 수신: {_}")
