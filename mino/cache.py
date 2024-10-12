@@ -45,7 +45,7 @@ def send_file(conn, file_num, file_data, file_size_kb, speed_kbps, request_cnt, 
     header_message = f"FILE:{file_num}:"
     tail_message = f":{max_file_num}:{request_cnt}"
 
-    full_message = header_message + file_data + tail_message +"\n"
+    full_message = header_message + file_data.decode() + tail_message +"\n"
     # 전송 시간 계산
     transfer_time = file_size_kb * 8 / speed_kbps  # 전송에 필요한 시간 계산
     time.sleep(transfer_time)  # 전송 시간 동안 대기
@@ -95,19 +95,21 @@ def request_from_data_server():
                 if message.startswith("FILE:"):
                     # 파일 데이터 수신
                     try:
-                        _, file_num, file_data, max_file_num, request_cnt = message.split(":", 4)[0:4], data[len("FILE:{file_num}:".format(file_num=file_num)):]
-                        received_file_num = int(received_file_num)
-                        max_file_num = int(max_file_num)
-                        request_cnt = int(request_cnt)
-                        file_data = file_data.encode()
-                
-                        # if received_file_num != file_num:
-                        #     print(f"받은 파일 번호가 요청한 파일 번호와 다릅니다.")
-                        #     return None, None
+                        # _, file_num, file_data, max_file_num, request_cnt = message.split(":", 4)[0:4], data[len("FILE:{file_num}:".format(file_num=file_num)):]
+                        # file_num = int(file_num)
+                        # max_file_num = int(max_file_num)
+                        # request_cnt = int(request_cnt)
+                        # file_data = file_data.encode()
+                        # 파일 데이터 파싱
+                        parts = message.split(":", 4)  # 콜론을 기준으로 4개로 분리
+                        file_num = int(parts[1])
+                        file_data = parts[2].encode()  # 파일 데이터를 바이트로 인코딩
+                        max_file_num = int(parts[3])
+                        request_cnt = int(parts[4])
 
                         file_size_kb = len(file_data) // 1024  # 바이트를 KB로 변환
                         Max = max_file_num
-                    
+
                     except Exception as e:
                         print(f"데이터 서버에서 파일 수신 중 오류")
 
@@ -116,22 +118,27 @@ def request_from_data_server():
                             cache[file_num] = (file_data, file_size_kb, request_cnt)
                             cache_size += file_size_kb
                             print(f"cache_size: {cache_size}, 데이터 서버로 부터 받은 파일: {file_num}")
-
                 # FLAG 메시지 처리
                 elif message.startswith("FLAG:"):
-                    # ':'로 구분하여 FLAG 값 추출
-                    _, flag_value = message.strip().split(":")
-                    FLAG = int(flag_value)
-                    print(f"데이터 서버로부터 FLAG 값 수신: {FLAG}")
-
+                    try:
+                        # ':'로 구분하여 FLAG 값 추출
+                        _, flag_value = message.strip().split(":")
+                        FLAG = int(flag_value)
+                        print(f"데이터 서버로부터 FLAG 값 수신: {FLAG}")
+                        break
+                    except Exception as e:
+                        print(f"FLAG 메시지 처리 중 오류: {e}")
             except Exception as e:
                 print(f"초기 데이터 수신 중 오류 발생: {e}")
                 break
 
         # free_space > Max 조건이 만족될 때까지 대기
-        while True:
+        # while True:
+        while FLAG == 1:
             try:
-                if FLAG == 1 and free_space >= Max:
+                print(f"FLAG:1 상태에서 파일 요청 중...")
+                # if FLAG == 1 and free_space >= Max:
+                if free_space >= Max:                    
                     print(f"free_space({free_space} KB) >= Max({Max}) 조건 만족")
                     with data_server_lock:
                         try:
@@ -146,18 +153,14 @@ def request_from_data_server():
                                 # 파일 데이터 수신
                                 try:
                                     _, file_num, file_data, max_file_num, request_cnt = message.split(":", 4)[0:4], data[len("FILE:{file_num}:".format(file_num=file_num)):]
-                                    received_file_num = int(received_file_num)
+                                    file_num = int(file_num)
                                     max_file_num = int(max_file_num)
                                     request_cnt = int(request_cnt)
                                     file_data = file_data.encode()
-                            
-                                    if received_file_num != file_num:
-                                        print(f"받은 파일 번호가 요청한 파일 번호와 다릅니다.")
-                                        return None, None
 
                                     file_size_kb = len(file_data) // 1024  # 바이트를 KB로 변환
                                     Max = max_file_num
-                            
+
                                 # 캐시 용량 검사 및 파일 저장
                                     with cache_lock:
                                         if cache_size + file_size_kb <= CACHE_CAPACITY_KB:
@@ -176,15 +179,16 @@ def request_from_data_server():
                                     _, flag_value = message.strip().split(":")
                                     FLAG = int(flag_value)
                                     print(f"데이터 서버로부터 FLAG 값 수신: {FLAG}")
+                                    
+                                    if message == "FLAG:0\n":
+                                        print("FLAG:0 수신 - 수신 작업을 종료합니다.")
+                                        break 
                             else:
                                 print(f"알 수 없는 데이터 서버 응답: {message}")
                                 return None, None
                         except Exception as e:
                             print(f"데이터 서버에서 파일 수신 중 오류 발생: {e}")
                             return None, None
-                elif FLAG == 0:
-                    print("FLAG:0 수신 - 수신 작업을 종료합니다.")
-                    break    
             except Exception as e:
                 print(f"데이터 서버에서 파일 수신 중 오류 발생: {e}")
 
@@ -199,14 +203,16 @@ def receive_data(socket):
             # 메시지 끝을 확인하기 위해 줄바꿈 또는 특정 구분자를 사용할 수 있습니다.
             if b'\n' in chunk:
                 break
-        except:
+        except Exception as e:
+            print(f"데이터 수신 중 오류 발생: {e}")
             break
     return data
 
 def handle_client(conn, addr):
     global FLAG
+    
     print(f"연결된 클라이언트: {addr}")
-    # FLAG = receive_data(data_server_socket)## 내가 수정한 부분
+    # FLAG = receive_data(data_server_socket)
 
     if FLAG == 1:
         print("데이터 서버에서 FLAG:1 수신. 파일 요청 시작.")
@@ -216,7 +222,7 @@ def handle_client(conn, addr):
             if not data:
                 break
             message = data.decode(errors='ignore')
-            
+
             # 메시지와 파일, 요청 구분
             if message.startswith("REQUEST:"):
                 _, file_num = message.strip().split(":")
