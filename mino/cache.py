@@ -42,8 +42,8 @@ def send_file(conn, file_num, file_data, file_size_kb, speed_kbps, request_cnt, 
     global cache_size
 
     # 파일 전송 메시지 생성
-    header_message = f"FILE:{file_num}"
-    tail_message = f"{max_file_num}:{request_cnt}"
+    header_message = f"FILE:{file_num}:"
+    tail_message = f":{max_file_num}:{request_cnt}"
 
     full_message = header_message + file_data + tail_message +"\n"
     # 전송 시간 계산
@@ -80,7 +80,7 @@ def send_file(conn, file_num, file_data, file_size_kb, speed_kbps, request_cnt, 
                 cache[file_num] = (file_data, file_size_kb, request_cnt)
 
 # 데이터 서버에서 파일을 요청하는 함수
-def request_from_data_server(): ######################없어도 될거
+def request_from_data_server():
         global cache_size, Max, FLAG
         free_space = CACHE_CAPACITY_KB - cache_size
         while FLAG==0:
@@ -120,21 +120,17 @@ def request_from_data_server(): ######################없어도 될거
                 print(f"초기 데이터 수신 중 오류 발생: {e}")
                 break
 
+        response = data_server_socket.recv(1024).decode()
+        # FLAG 메시지 처리
+        if response.startswith("FLAG:"):
+            # ':'로 구분하여 FLAG 값 추출
+            _, flag_value = response.strip().split(":")
+            FLAG = int(flag_value)
+            print(f"데이터 서버로부터 FLAG 값 수신: {FLAG}")
+        
         # free_space > Max 조건이 만족될 때까지 대기
-        while True: # 이 True 부분을 Flag로 바꿔서 FLAG:0을 받으면 종료 (종료하면 쓰레드도 같이 종료됌)
+        while FLAG == 1:
             try:
-                response = data_server_socket.recv(1024).decode()
-                # FLAG 메시지 처리
-                if response.startswith("FLAG:"):
-                    # ':'로 구분하여 FLAG 값 추출
-                    _, flag_value = response.strip().split(":")
-                    FLAG = int(flag_value)
-                    print(f"데이터 서버로부터 FLAG 값 수신: {FLAG}")
-                    # FLAG가 0이면 종료
-                    if FLAG == 0:
-                        print("FLAG:0 수신 - 수신 작업을 종료합니다.")
-                        break
-
                 if FLAG == 1 and free_space >= Max:
                     print(f"free_space({free_space} KB) >= Max({Max}) 조건 만족")
                     with data_server_lock:
@@ -179,6 +175,9 @@ def request_from_data_server(): ######################없어도 될거
                         except Exception as e:
                             print(f"데이터 서버에서 파일 수신 중 오류 발생: {e}")
                             return None, None
+                elif FLAG == 0:
+                    print("FLAG:0 수신 - 수신 작업을 종료합니다.")
+                    break    
             except Exception as e:
                 print(f"데이터 서버에서 파일 수신 중 오류 발생: {e}")
                 break
@@ -208,8 +207,8 @@ def handle_client(conn, addr):
     FLAG_msg = FLAG_msg.decode()  # bytes를 str로 변환
     
     if FLAG_msg.startswith("FLAG:"):
-        _, FLAG = FLAG_msg.split(":")
-        # FLAG = int(FLAG)
+        _, flag_value = FLAG_msg.split(":")
+        FLAG = int(flag_value)
 
     if FLAG == 1:
         print("데이터 서버에서 FLAG:1 수신. 파일 요청 시작.")
