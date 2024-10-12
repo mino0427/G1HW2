@@ -23,6 +23,7 @@ processed_file=0
 virtual_files_lock = threading.Lock()
 
 def create_virtual_files():
+    global virtual_files
     print("가상 파일 크기 정보 생성 시작...")
     with virtual_files_lock:
         for file_num in range(1, 100001):
@@ -32,6 +33,11 @@ def create_virtual_files():
 
 
 def find_next_file_num(conn):#캐시가 받아야할 다음 파일 정보를 알려주기 위함
+    global data_array
+    global FLAG
+    global Max
+    global cache_servers
+    
     while FLAG:
         # 값이 0보다 큰 것들 중 가장 작은 짝수 index 찾기
         if cache_servers[0][2] == conn:
@@ -49,6 +55,8 @@ def find_next_file_num(conn):#캐시가 받아야할 다음 파일 정보를 알
     
 
 def identify_connection(conn):
+    global cache_servers
+    
     # cache_servers 리스트에서 conn이 있는지 확인
     for cache_server in cache_servers:
         if cache_server[2] == conn:  # cache_servers에서 conn과 비교
@@ -68,7 +76,9 @@ def identify_connection(conn):
 # 파일 전송 시간 계산 및 전송 처리 함수
 def send_file(conn, file_num, file_size_kb, speed_kbps):
     global processed_file
-
+    global data_array
+    global Max
+    
     # 캐시, 클라이언트에 따라 data_array 업데이트 하기
     node = identify_connection(conn)
 
@@ -130,6 +140,11 @@ def send_file(conn, file_num, file_size_kb, speed_kbps):
 
 
 def set_cache(): #홀짝캐시에게 25MB만큼의 데이터 전송하기
+    global data_array
+    global cache_servers
+    global DATA_TO_CACHE_SPEED
+    global DATA_TO_CLIENT_SPEED
+    
     total_mb_sent_even = 0  # 짝수 캐시에게 보낸 총 데이터 크기 (MB)
     total_mb_sent_odd = 0   # 홀수 캐시에게 보낸 총 데이터 크기 (MB)
 
@@ -189,6 +204,10 @@ def receive_data(socket):
 def request_processing(conn, addr): 
     global data_array  # 전역 변수를 함수 내에서 사용하기 위해 선언
     global processed_file
+    global FLAG
+    global virtual_files
+    global DATA_TO_CLIENT_SPEED
+    
     print(f"연결된 {addr}로부터 파일 요청 처리 시작")
 
     while FLAG:
@@ -261,6 +280,9 @@ def request_processing(conn, addr):
 
     
 def send_flag_to_all():
+    global FLAG
+    global cache_servers
+    
     # 모든 캐시 서버에 FLAG 메시지 전송
     for cache_server in cache_servers:
         cache_server[2].sendall(f"FLAG:{FLAG}\n".encode())  # cache_server[2]는 conn 객체
@@ -276,6 +298,7 @@ def send_flag_to_all():
 
 
 def start_server():
+    global cache_servers
     #파일 생성
     create_virtual_files()
     
