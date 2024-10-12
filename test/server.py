@@ -137,37 +137,38 @@ def set_cache(): #홀짝캐시에게 25MB만큼의 데이터 전송하기
     even_cache_conn = cache_servers[0][2]  # 짝수 캐시의 conn
     odd_cache_conn = cache_servers[1][2]   # 홀수 캐시의 conn
 
-    # 짝수 인덱스부터 시작해서 캐시로 파일 보내기
-    for file_num in range(2, len(data_array), 2):  # 짝수 파일 번호만 순회
+    even_flag=0#0이면 짝수 캐시 완료되면 1
+    odd_flag=0#0이면 홀수 캐시 완료되면 1
+
+    # 짝수와 홀수 인덱스를 같은 루프에서 처리
+    for file_num in range(len(data_array)):
         if data_array[file_num] > 0:
             file_size_kb = file_num  # 파일 번호가 곧 크기(KB 단위)
             file_size_mb = file_size_kb / 1024  # MB 단위로 변환
 
-            if total_mb_sent_even + file_size_mb <= 25:  # 25MB를 넘지 않도록
-                # send_file 함수를 사용하여 짝수 캐시에 파일 전송
-                send_file(even_cache_conn, file_num, file_size_kb, DATA_TO_CACHE_SPEED)
-                total_mb_sent_even += file_size_mb  # 전송한 데이터 크기 업데이트          
-                
-            else:
-                print("짝수 cacahe 초기 세팅 완료!!!!!!!!!!!!")
-                break  # 25MB를 넘으면 중단
+            if file_num % 2 == 0:  # 짝수 파일 처리
+                if total_mb_sent_even + file_size_mb <= 25:  # 25MB를 넘지 않도록
+                    # send_file 함수를 사용하여 짝수 캐시에 파일 전송
+                    send_file(even_cache_conn, file_num, file_size_kb, DATA_TO_CACHE_SPEED)
+                    total_mb_sent_even += file_size_mb  # 전송한 데이터 크기 업데이트
+                else:
+                    even_flag=1
+                    if(even_flag==1 and odd_flag==1):
+                        break
+                    continue  # 짝수 캐시 초기 세팅이 끝나면 홀수 파일 처리로 넘어감
+            else:  # 홀수 파일 처리
+                if total_mb_sent_odd + file_size_mb <= 25:  # 25MB를 넘지 않도록
+                    # send_file 함수를 사용하여 홀수 캐시에 파일 전송
+                    send_file(odd_cache_conn, file_num, file_size_kb, DATA_TO_CACHE_SPEED)
+                    total_mb_sent_odd += file_size_mb  # 전송한 데이터 크기 업데이트
+                else:
+                    odd=1
+                    if(even_flag==1 and odd_flag==1):
+                        break
+                    continue  # 홀수 캐시 초기 세팅이 끝나면 짝수 파일 처리로 넘어감
 
-    # 홀수 인덱스부터 시작해서 캐시로 파일 보내기
-    for file_num in range(1, len(data_array), 2):  # 홀수 파일 번호만 순회
-        if data_array[file_num] > 0:
-            file_size_kb = file_num  # 파일 번호가 곧 크기(KB 단위)
-            file_size_mb = file_size_kb / 1024  # MB 단위로 변환
 
-            if total_mb_sent_odd + file_size_mb <= 25:  # 25MB를 넘지 않도록
-                # send_file 함수를 사용하여 짝수 캐시에 파일 전송
-                send_file(odd_cache_conn, file_num, file_size_kb, DATA_TO_CACHE_SPEED)
-                total_mb_sent_odd += file_size_mb  # 전송한 데이터 크기 업데이트          
-                
-            else:
-                print("홀수 cacahe 초기 세팅 완료!!!!!!!!!!!!")
-                break  # 25MB를 넘으면 중단
-
-    print("캐시 서버로 25MB 이내의 파일을 전송 완료했습니다.")
+    print("홀짝 캐시 서버로 25MB 이내의 파일을 전송 완료했습니다.")
 
 # 데이터를 청크 단위로 받는 함수
 def receive_data(socket):
