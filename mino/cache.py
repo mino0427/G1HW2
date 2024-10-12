@@ -89,6 +89,7 @@ def request_from_data_server(): ######################없어도 될거
                 file_size_kb = 25 * 1024  # 25MB를 KB로 변환
                 file_data = receive_data(data_server_socket)
 
+                message = data.decode(errors='ignore')
                 # file 데이터로 받아야됌
                 if message.startswith("FILE:"):
                     # 파일 데이터 수신
