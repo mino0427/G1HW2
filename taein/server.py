@@ -18,7 +18,6 @@ virtual_files = {}  # 가상 파일 저장 (파일 번호: 파일 크기)
 data_array = [0] * 10001 #클라이언트의 요청 횟수를 저장한다.
 FLAG=1 #프로그램 시작과 종료를 알리는 FLAG 변수(1: 시작, 0: 종료)
 Max=[2,1] #Max[0]은 짝수 캐시에 보낸 가장 큰 파일 번호, Max[1]은 홀수 캐시에 보낸 가장 큰 파일 번호
-next_min = [None, None]  # next_min은 캐시에게 보낼 다음 파일 번호(0: 짝수, 1: 홀수)
 processed_file=0
 
 virtual_files_lock = threading.Lock()
@@ -32,24 +31,21 @@ def create_virtual_files():
     print(f"총 {len(virtual_files)}개의 가상 파일 크기 정보 생성 완료!")
 
 
-def send_next_file_num(conn):#캐시가 받아야할 다음 파일 정보를 알려주기 위함
+def find_next_file_num(conn):#캐시가 받아야할 다음 파일 정보를 알려주기 위함
     while FLAG:
         # 값이 0보다 큰 것들 중 가장 작은 짝수 index 찾기
         if cache_servers[0][2] == conn:
             for i in range(Max[0], len(data_array), 2):  # 짝수 index만 순회
                 if data_array[i] > 0:
-                    next_min[0] = i
-                    # next_min 값을 짝수 cache로 전달
-                    conn.sendall(f"NEXT:{next_min[0]}\n".encode())
-                    break
+                    
+                    return i
         # 값이 0보다 큰 것들 중 가장 작은 홀수 index 찾기
         else:
             for i in range(Max[1], len(data_array), 2):  # 홀수 index만 순회
                 if data_array[i] > 0:
-                    next_min[1] = i
+                    
                     # next_min 값을 홀수 cache로 전달
-                    conn.sendall(f"NEXT:{next_min[1]}\n".encode())
-                    break
+                    return i
     
 
 def identify_connection(conn):
@@ -88,17 +84,20 @@ def send_file(conn, file_num, file_size_kb, speed_kbps):
 
     # max_file_num 생성 및 Max값 업데이트
     if file_num % 2 == 0:
-        max_file_num = Max[0]
+        next_file_num = find_next_file_num(conn)
         Max[0] = file_num
+
     else:
-        max_file_num = Max[1]
+        next_file_num =find_next_file_num(conn)
         Max[1] = file_num
+  
+
 
     # 헤더 메시지 생성
     header_message = f"FILE:{file_num}:".encode()
 
     # tail 메시지 생성
-    tail_message = f":{max_file_num}:{request_cnt}".encode()
+    tail_message = f":{next_file_num}:{request_cnt}".encode()
 
     # 전체 전송 크기 계산
     total_bytes = file_size_kb * 1024 // 8  # 가상 파일의 크기를 바이트로 변환
@@ -264,9 +263,8 @@ def send_flag_to_all():
     # 모든 캐시 서버에 FLAG 메시지 전송
     for cache_server in cache_servers:
         cache_server[2].sendall(f"FLAG:{FLAG}\n".encode())  # cache_server[2]는 conn 객체
-        thread = threading.Thread(target=send_next_file_num, args=(cache_server[2]))
-        thread.start()
-
+    
+    
     if(FLAG==1):
         # 모든 클라이언트에 FLAG 메시지 전송
         for client_conn in client_conns:

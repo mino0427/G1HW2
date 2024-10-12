@@ -109,7 +109,7 @@ def request_from_data_server(): ######################없어도 될거
         try:
             print(f"데이터 서버로부터 초기 25MB 파일 수신 대기 중...")
             file_size_kb = 25 * 1024  # 25MB를 KB로 변환
-            file_data = receive_data(data_server_socket, file_size_kb)
+            file_data = receive_data(data_server_socket)
 
             if file_data:
                 with cache_lock:
