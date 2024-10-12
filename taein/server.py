@@ -152,8 +152,8 @@ def set_cache(): #홀짝캐시에게 25MB만큼의 데이터 전송하기
     total_mb_sent_odd = 0   # 홀수 캐시에게 보낸 총 데이터 크기 (MB)
 
     # 짝수 캐시와 홀수 캐시의 conn 구분
-    even_cache_conn = cache_servers[0][2]  # 짝수 캐시의 conn
-    odd_cache_conn = cache_servers[1][2]   # 홀수 캐시의 conn
+    even_cache_conn = cache_servers[1][2]  # 짝수 캐시의 conn
+    odd_cache_conn = cache_servers[0][2]   # 홀수 캐시의 conn
 
     even_flag=0#0이면 짝수 캐시 완료되면 1
     odd_flag=0#0이면 홀수 캐시 완료되면 1
