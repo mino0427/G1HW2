@@ -120,17 +120,19 @@ def request_from_data_server():
                 print(f"초기 데이터 수신 중 오류 발생: {e}")
                 break
 
-        response = data_server_socket.recv(1024).decode()
-        # FLAG 메시지 처리
-        if response.startswith("FLAG:"):
-            # ':'로 구분하여 FLAG 값 추출
-            _, flag_value = response.strip().split(":")
-            FLAG = int(flag_value)
-            print(f"데이터 서버로부터 FLAG 값 수신: {FLAG}")
+        
         
         # free_space > Max 조건이 만족될 때까지 대기
-        while FLAG == 1:
+        while True:
             try:
+                response = data_server_socket.recv(1024).decode()
+                # FLAG 메시지 처리
+                if response.startswith("FLAG:"):
+                    # ':'로 구분하여 FLAG 값 추출
+                    _, flag_value = response.strip().split(":")
+                    FLAG = int(flag_value)
+                    print(f"데이터 서버로부터 FLAG 값 수신: {FLAG}")
+                    
                 if FLAG == 1 and free_space >= Max:
                     print(f"free_space({free_space} KB) >= Max({Max}) 조건 만족")
                     with data_server_lock:
