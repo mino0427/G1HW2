@@ -232,7 +232,7 @@ def request_processing(conn, addr):
                     for file_num in random_list:
                         data_array[file_num] += 1  # 파일 번호에 해당하는 요청 횟수 증가
                         processed_file += 1
-                    print("검문좀 하겠습니다.")
+
                     
                     
                     if processed_file == 4000:

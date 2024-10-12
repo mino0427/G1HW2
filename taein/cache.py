@@ -140,8 +140,8 @@ def request_from_data_server(): ######################없어도 될거
                         print("FLAG:0 수신 - 수신 작업을 종료합니다.")
                         break
 
-                if FLAG == 1 and free_space > Max:
-                    print(f"free_space({free_space} KB) > Max({Max}) 조건 만족")
+                if FLAG == 1 and free_space >= Max:
+                    print(f"free_space({free_space} KB) >= Max({Max}) 조건 만족")
                     file_num = Max
                     with data_server_lock:
                         try:
@@ -228,13 +228,13 @@ def handle_client(conn, addr):
                     if file_num in cache:
                         #캐시 히트
                         file_data, file_size_kb, request_cnt = cache[file_num]
-                        conn.sendall("MSG:Cache Hit\n".encode())
+                        conn.sendall("Cache Hit".encode())
                         # file_size_kb = cache[file_num]
                         send_file(conn, file_data, file_size_kb, CACHE_TO_CLIENT_SPEED)
                         print(f"Cache Hit: {file_num}번 파일 캐시에서 {CACHE_TO_CLIENT_SPEED}로 전송")
                     else:
                         # 캐시 미스
-                        conn.sendall("MSG:Cache Miss\n".encode())
+                        conn.sendall("Cache Miss".encode())
                         print(f"Cache Miss: {file_num}번 파일 캐시에 없음, 데이터 서버로 요청")
                         
     conn.close()
