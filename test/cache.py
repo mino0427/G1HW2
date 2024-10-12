@@ -83,7 +83,7 @@ def send_file(conn, file_num, file_data, file_size_kb, speed_kbps, request_cnt, 
 def request_from_data_server(): ######################없어도 될거
         global cache_size, Max, FLAG
         free_space = CACHE_CAPACITY_KB - cache_size
-        while True:
+        while FLAG==0:
             try:
                 print(f"데이터 서버로부터 초기 25MB 파일 수신 대기 중...")
                 file_size_kb = 25 * 1024  # 25MB를 KB로 변환
@@ -93,7 +93,8 @@ def request_from_data_server(): ######################없어도 될거
                     with cache_lock:
                         cache[file_num] = (file_data, file_size_kb, request_cnt)
                         cache_size += file_size_kb
-                        print(f"초기 25MB 파일을 캐시에 저장했습니다. 현재 캐시 사용량: {cache_size} KB")
+                        print(f"cache_size: {cache_size}, 데이터 서버로 부터 받은 파일: {file_num}")
+                        
                 else:
                     print("초기 25MB 파일 수신 실패")
             except Exception as e:

@@ -59,7 +59,7 @@ def send_file(conn, file_num, file_data, file_size_kb, speed_kbps, request_cnt, 
         conn.sendall(chunk)
         sent_bytes += chunk_size
 
-
+    conn.sendall(f"MSG:파일 전송 완료 {file_size_kb} kb\n".encode())
     
     # request_cnt 감소 및 캐시 정리
     with cache_lock:
@@ -83,21 +83,23 @@ def send_file(conn, file_num, file_data, file_size_kb, speed_kbps, request_cnt, 
 def request_from_data_server(): ######################없어도 될거
         global cache_size, Max, FLAG
         free_space = CACHE_CAPACITY_KB - cache_size
+        while FLAG==0:
+            try:
+                print(f"데이터 서버로부터 초기 25MB 파일 수신 대기 중...")
+                file_size_kb = 25 * 1024  # 25MB를 KB로 변환
+                file_data = receive_data(data_server_socket)
 
-        try:
-            print(f"데이터 서버로부터 초기 25MB 파일 수신 대기 중...")
-            file_size_kb = 25 * 1024  # 25MB를 KB로 변환
-            file_data = receive_data(data_server_socket)
-
-            if file_data:
-                with cache_lock:
-                    cache[file_num] = (file_data, file_size_kb, request_cnt)
-                    cache_size += file_size_kb
-                    print(f"초기 25MB 파일을 캐시에 저장했습니다. 현재 캐시 사용량: {cache_size} KB")
-            else:
-                print("초기 25MB 파일 수신 실패")
-        except Exception as e:
-            print(f"초기 데이터 수신 중 오류 발생: {e}")
+                if file_data:
+                    with cache_lock:
+                        cache[file_num] = (file_data, file_size_kb, request_cnt)
+                        cache_size += file_size_kb
+                        print(f"cache_size: {cache_size}, 데이터 서버로 부터 받은 파일: {file_num}")
+                        
+                else:
+                    print("초기 25MB 파일 수신 실패")
+            except Exception as e:
+                print(f"초기 데이터 수신 중 오류 발생: {e}")
+                break
 
         # free_space > Max 조건이 만족될 때까지 대기
         while True: # 이 True 부분을 Flag로 바꿔서 FLAG:0을 받으면 종료 (종료하면 쓰레드도 같이 종료됌)
