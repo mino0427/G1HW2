@@ -55,7 +55,7 @@ def send_file(conn, file_num, file_data, file_size_kb, speed_kbps, request_cnt, 
     sent_bytes = 0
     while sent_bytes < total_bytes:
         chunk_size = min(4096, total_bytes - sent_bytes)
-        chunk = file_data[sent_bytes:sent_bytes + chunk_size].encode()
+        chunk = full_message[sent_bytes:sent_bytes + chunk_size].encode() # 수정한 부분
         conn.sendall(chunk)
         sent_bytes += chunk_size
 
@@ -85,11 +85,11 @@ def request_from_data_server(): ######################없어도 될거
         free_space = CACHE_CAPACITY_KB - cache_size
         while FLAG==0:
             try:
-                print(f"데이터 서버로부터 초기 25MB 파일 수신 대기 중...")
+                print(f"데이터 서버로부터 초기 25MB 파일 수신 중...")
                 file_size_kb = 25 * 1024  # 25MB를 KB로 변환
                 file_data = receive_data(data_server_socket)
 
-                message = data.decode(errors='ignore')
+                message = file_data.decode(errors='ignore')
                 # file 데이터로 받아야됌
                 if message.startswith("FILE:"):
                     # 파일 데이터 수신
@@ -115,9 +115,7 @@ def request_from_data_server(): ######################없어도 될거
                         cache[file_num] = (file_data, file_size_kb, request_cnt)
                         cache_size += file_size_kb
                         print(f"cache_size: {cache_size}, 데이터 서버로 부터 받은 파일: {file_num}")
-                        
-                else:
-                    print("초기 25MB 파일 수신 실패")
+
             except Exception as e:
                 print(f"초기 데이터 수신 중 오류 발생: {e}")
                 break
@@ -205,7 +203,7 @@ def handle_client(conn, addr):
     print(f"연결된 클라이언트: {addr}")
     ###############################FLAG가 0인 경우 그냥 이 부분을 넘어가버림#############수정필요################
     FLAG = receive_data(data_server_socket)## 내가 수정한 부분
-    if  FLAG:
+    if FLAG:
         print("데이터 서버에서 FLAG:1 수신. 파일 요청 시작.")
 
         while FLAG:
@@ -224,7 +222,7 @@ def handle_client(conn, addr):
                 with cache_lock:
                     if file_num in cache:
                         #캐시 히트
-                        file_data, file_size_kb, request_cnt = cache[file_num]
+                        file_data, file_size_kb = cache[file_num]
                         conn.sendall("Cache Hit".encode())
                         # file_size_kb = cache[file_num]
                         send_file(conn, file_data, file_size_kb, CACHE_TO_CLIENT_SPEED)
