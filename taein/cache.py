@@ -48,7 +48,7 @@ def send_file(conn, file_num, file_data, file_size_kb, speed_kbps, request_cnt, 
     full_message = header_message + file_data + tail_message +"\n"
     # 전송 시간 계산
     transfer_time = file_size_kb * 8 / speed_kbps  # 전송에 필요한 시간 계산
-    time.sleep(transfer_time)  # 전송 시간 동안 대기
+    #time.sleep(transfer_time)  # 전송 시간 동안 대기
 
     # 실제 파일 데이터 전송
     total_bytes = len(full_message)
@@ -109,7 +109,10 @@ def request_from_data_server(): ######################없어도 될거
                     
                     except Exception as e:
                         print(f"데이터 서버에서 파일 수신 중 오류")
-
+                elif message.startswith("FLAG:"):
+                    FLAG=1
+                    break
+                
                 if file_data:
                     with cache_lock:
                         cache[file_num] = (file_data, file_size_kb, request_cnt)
@@ -205,17 +208,10 @@ def handle_client(conn, addr):
     # FLAG = receive_data(data_server_socket)## 내가 수정한 부분
     
     # 데이터를 수신하여 FLAG 값을 확인
-    FLAG_msg = receive_data(data_server_socket)
-    FLAG_msg = FLAG_msg.decode()  # bytes를 str로 변환
-    
-    print(f"검문소 검문 있습니다.{FLAG_msg}")
-    
-    if FLAG_msg.startswith("FLAG:"):
-        _, FLAG = FLAG_msg.strip().split(":")
-        FLAG = int(FLAG)
-    
-    print("검문소 입니다")
-    
+    while True:
+        if FLAG==1:
+            break
+
     if FLAG == 1:
         print("데이터 서버에서 FLAG:1 수신. 파일 요청 시작.")
 

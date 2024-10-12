@@ -115,7 +115,7 @@ def send_file(conn, file_num, file_size_kb, speed_kbps):
     transfer_time = file_size_kb / speed_kbps  # 전송에 필요한 시간 계산
     print(f"파일 전송 시작: 파일 번호 {file_num}, 크기 {file_size_kb} KB, 예상 소요 시간 {transfer_time:.2f}초")
 
-    time.sleep(transfer_time)  # 전송 시간 동안 대기
+    #time.sleep(transfer_time)  # 전송 시간 동안 대기
 
     # 전체 메시지 생성 (헤더 + 파일 데이터 + tail 메시지)
     file_data = b'X' * total_bytes  # 'X'를 바이트로 변환
