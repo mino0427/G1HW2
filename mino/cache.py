@@ -201,16 +201,15 @@ def receive_data(socket):
 def handle_client(conn, addr):
     global FLAG
     print(f"연결된 클라이언트: {addr}")
-    ###############################FLAG가 0인 경우 그냥 이 부분을 넘어가버림#############수정필요################
     # FLAG = receive_data(data_server_socket)## 내가 수정한 부분
 
     # 데이터를 수신하여 FLAG 값을 확인
-    FLAG_msg = receive_data(conn)
+    FLAG_msg = receive_data(data_server_socket)
     FLAG_msg = FLAG_msg.decode()  # bytes를 str로 변환
     
     if FLAG_msg.startswith("FLAG:"):
         _, FLAG = FLAG_msg.split(":")
-        FLAG = int(FLAG)
+        # FLAG = int(FLAG)
 
     if FLAG == 1:
         print("데이터 서버에서 FLAG:1 수신. 파일 요청 시작.")
@@ -263,23 +262,6 @@ def start_cache_server():
     print(f"데이터 서버 {DATA_SERVER_HOST}:{DATA_SERVER_PORT}에 연결")
     
     try:
-    # 데이터 서버로부터 캐시 서버 번호 할당
-        # data_server_socket.sendall("REQUEST_CACHE_SERVER_NUMBER".encode())#######################
-        # response = data_server_socket.recv(1024).decode()
-        # if response.startswith("CACHE_SERVER_NUMBER:"):
-        #     _, number = response.split(":")
-        #     cache_server_number = int(number)
-        #     print(f"캐시 서버 번호 할당 받음: {cache_server_number}")
-        # else:
-        #     print("캐시 서버 번호를 할당받지 못했습니다.")
-        #     data_server_socket.close()
-        #     return
-
-        # # if cache_server_number > MAX_CACHE_SERVERS:
-        # #     print(f"최대 캐시 서버 수({MAX_CACHE_SERVERS})를 초과했습니다.")
-        # #     data_server_socket.close()
-        # #     return
-
         # 캐시 서버 소켓 설정 (자동 포트 할당)
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server.bind((HOST, 0))  # 운영체제가 자동으로 사용 가능한 포트 할당
