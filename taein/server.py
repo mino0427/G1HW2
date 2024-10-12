@@ -211,7 +211,7 @@ def request_processing(conn, addr):
                     # 요청한 파일의 크기 계산 및 전송 처리
                     with virtual_files_lock:
                         if file_num in virtual_files:
-                            file_size_kb = len(virtual_files[file_num]) // 1024  # 파일 크기(KB) 계산
+                            file_size_kb = file_num  # 파일 크기(KB) 계산
                             print(f"데이터 서버: {file_num}번 파일을 전송 준비 중 (크기: {file_size_kb} KB)")
 
                             # send_file 함수를 사용하여 파일 전송
