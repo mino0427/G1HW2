@@ -94,6 +94,7 @@ def request_from_data_server(): ######################없어도 될거
                         cache[file_num] = (file_data, file_size_kb, request_cnt)
                         cache_size += file_size_kb
                         print(f"초기 25MB 파일을 캐시에 저장했습니다. 현재 캐시 사용량: {cache_size} KB")
+                        break
                 else:
                     print("초기 25MB 파일 수신 실패")
             except Exception as e:
