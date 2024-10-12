@@ -261,10 +261,11 @@ def handle_client(conn, addr):
                 with cache_lock:
                     if file_num in cache:
                         #캐시 히트
-                        file_data, file_size_kb = cache[file_num]
+                        file_data, file_size_kb, request_cnt = cache[file_num]
                         conn.sendall("Cache Hit".encode())
                         # file_size_kb = cache[file_num]
-                        send_file(conn, file_data, file_size_kb, CACHE_TO_CLIENT_SPEED)
+                        # send_file(conn, file_data, file_size_kb, request_cnt, CACHE_TO_CLIENT_SPEED)
+                        send_file(file_num, file_data, file_size_kb, request_cnt)
                         print(f"Cache Hit: {file_num}번 파일 캐시에서 {CACHE_TO_CLIENT_SPEED}로 전송")
                     else:
                         # 캐시 미스
