@@ -51,7 +51,7 @@ def send_file(conn, file_num, file_data, file_size_kb, speed_kbps, request_cnt, 
     time.sleep(transfer_time)  # 전송 시간 동안 대기
 
     # 실제 파일 데이터 전송
-    total_bytes = len(file_data)
+    total_bytes = len(full_message)
     sent_bytes = 0
     while sent_bytes < total_bytes:
         chunk_size = min(4096, total_bytes - sent_bytes)
