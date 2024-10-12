@@ -240,10 +240,8 @@ def handle_client(conn, addr):
         print("데이터 서버에서 FLAG:1 수신. 파일 요청 시작.")
 
         while FLAG:
-            data = receive_data(conn)
-            if not data:
-                break
-            message = data.decode(errors='ignore')
+            message = receive_data(conn)
+
             
             # 메시지와 파일, 요청 구분
             if message.startswith("REQUEST:"):
@@ -253,12 +251,12 @@ def handle_client(conn, addr):
 
             # 캐시에 있는지 확인
                 with cache_lock:
-                    if file_num in cache:
+                    if False:#file_num in cache:
                         #캐시 히트
-                        file_data, file_size_kb = cache[file_num]
+                        file_data, file_size_kb,request_cnt = cache[file_num]
                         conn.sendall("Cache Hit".encode())
-                        # file_size_kb = cache[file_num]
-                        send_file(conn, file_data, file_size_kb, CACHE_TO_CLIENT_SPEED)
+                        file_size_kb = file_num*1024
+                        send_file(conn, file_num,file_data, file_size_kb, CACHE_TO_CLIENT_SPEED,request_cnt,Max)
                         print(f"Cache Hit: {file_num}번 파일 캐시에서 {CACHE_TO_CLIENT_SPEED}로 전송")
                     else:
                         # 캐시 미스

@@ -147,9 +147,7 @@ def start_client():
 
     print(f"수신한 캐시 서버 정보: {cache_servers}")
 
-    
-    print("검문소3")
-    
+ 
     
     # 두 개의 캐시 서버에 각각 연결을 유지
     cache_conns = []
@@ -160,7 +158,6 @@ def start_client():
         print(f"캐시 서버 {cache_host}:{cache_port}에 연결 유지")
 
 
-    print(f"검문소4:{cache_conns}")
 
     file_request_list = random_list() #랜덤 리스트 생성
     send_random_list(data_server_conn, file_request_list) #랜덤 리스트 데이터 서버에 전송

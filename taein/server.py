@@ -84,8 +84,6 @@ def send_file(conn, file_num, file_size_kb, speed_kbps):
     # 캐시, 클라이언트에 따라 data_array 업데이트 하기
     node = identify_connection(conn)
 
-
-
     # 파일 요청 횟수 생성
     request_cnt = data_array[file_num]
 
@@ -112,7 +110,7 @@ def send_file(conn, file_num, file_size_kb, speed_kbps):
     transfer_time = file_size_kb / speed_kbps  # 전송에 필요한 시간 계산
     print(f"파일 전송 시작: 파일 번호 {file_num}, 크기 {file_size_kb} KB, 예상 소요 시간 {transfer_time:.2f}초")
 
-    #time.sleep(transfer_time)  # 전송 시간 동안 대기
+    time.sleep(transfer_time)  # 전송 시간 동안 대기
 
     # 전체 메시지 생성 (헤더 + 파일 데이터 + tail 메시지)
     file_data = b'X' * total_bytes  # 'X'를 바이트로 변환
@@ -194,6 +192,9 @@ def set_cache(): #홀짝캐시에게 25MB만큼의 데이터 전송하기
 def receive_data(socket):
     global buffer  # 전역 buffer 사용
 
+    print(identify_connection(socket))
+    
+    
     while True:
         try:
             # buffer에 '\n'이 있으면, 메시지를 분리하여 반환
@@ -232,6 +233,7 @@ def request_processing(conn, addr):
         try:
             # 데이터를 청크 단위로 수신
             message = receive_data(conn)
+            print("검문")
             if not message :
                 break  # 연결이 종료되면 루프 탈출
 
@@ -254,6 +256,7 @@ def request_processing(conn, addr):
 
                     else:
                         print(f"데이터 서버: {file_num}번 파일을 찾을 수 없음")
+                        continue
                         #conn.sendall(f"파일을 찾을 수 없습니다: {file_num}".encode())
 
             # RANDOM:random_list 메시지 처리
@@ -273,6 +276,7 @@ def request_processing(conn, addr):
                 if processed_file == 4000:
                     set_cache()
                     send_flag_to_all()
+                    print("검문2")
                     
             else:
                 print(f"잘못된 요청 형식 수신: {message}")
