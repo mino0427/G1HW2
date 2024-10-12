@@ -90,6 +90,7 @@ def request_from_data_server():
                 file_data = receive_data(data_server_socket)
 
                 message = file_data.decode(errors='ignore')
+
                 # file 데이터로 받아야됌
                 if message.startswith("FILE:"):
                     # 파일 데이터 수신
@@ -100,9 +101,9 @@ def request_from_data_server():
                         request_cnt = int(request_cnt)
                         file_data = file_data.encode()
                 
-                        if received_file_num != file_num:
-                            print(f"받은 파일 번호가 요청한 파일 번호와 다릅니다.")
-                            return None, None
+                        # if received_file_num != file_num:
+                        #     print(f"받은 파일 번호가 요청한 파일 번호와 다릅니다.")
+                        #     return None, None
 
                         file_size_kb = len(file_data) // 1024  # 바이트를 KB로 변환
                         Max = max_file_num
@@ -110,29 +111,26 @@ def request_from_data_server():
                     except Exception as e:
                         print(f"데이터 서버에서 파일 수신 중 오류")
 
-                if file_data:
-                    with cache_lock:
-                        cache[file_num] = (file_data, file_size_kb, request_cnt)
-                        cache_size += file_size_kb
-                        print(f"cache_size: {cache_size}, 데이터 서버로 부터 받은 파일: {file_num}")
+                    if file_data:
+                        with cache_lock:
+                            cache[file_num] = (file_data, file_size_kb, request_cnt)
+                            cache_size += file_size_kb
+                            print(f"cache_size: {cache_size}, 데이터 서버로 부터 받은 파일: {file_num}")
+
+                # FLAG 메시지 처리
+                elif message.startswith("FLAG:"):
+                    # ':'로 구분하여 FLAG 값 추출
+                    _, flag_value = message.strip().split(":")
+                    FLAG = int(flag_value)
+                    print(f"데이터 서버로부터 FLAG 값 수신: {FLAG}")
 
             except Exception as e:
                 print(f"초기 데이터 수신 중 오류 발생: {e}")
                 break
 
-        
-        
         # free_space > Max 조건이 만족될 때까지 대기
         while True:
             try:
-                response = data_server_socket.recv(1024).decode()
-                # FLAG 메시지 처리
-                if response.startswith("FLAG:"):
-                    # ':'로 구분하여 FLAG 값 추출
-                    _, flag_value = response.strip().split(":")
-                    FLAG = int(flag_value)
-                    print(f"데이터 서버로부터 FLAG 값 수신: {FLAG}")
-                    
                 if FLAG == 1 and free_space >= Max:
                     print(f"free_space({free_space} KB) >= Max({Max}) 조건 만족")
                     with data_server_lock:
@@ -171,6 +169,13 @@ def request_from_data_server():
                                 except ValueError as e:
                                     print(f"파일 메시지 파싱 중 오류 발생: {e}")
                                     return None, None
+                                
+                            # FLAG 메시지 처리
+                            elif message.startswith("FLAG:"):                 
+                                    # ':'로 구분하여 FLAG 값 추출
+                                    _, flag_value = message.strip().split(":")
+                                    FLAG = int(flag_value)
+                                    print(f"데이터 서버로부터 FLAG 값 수신: {FLAG}")
                             else:
                                 print(f"알 수 없는 데이터 서버 응답: {message}")
                                 return None, None
@@ -182,7 +187,6 @@ def request_from_data_server():
                     break    
             except Exception as e:
                 print(f"데이터 서버에서 파일 수신 중 오류 발생: {e}")
-                break
 
 def receive_data(socket):
     data = b''
@@ -204,18 +208,10 @@ def handle_client(conn, addr):
     print(f"연결된 클라이언트: {addr}")
     # FLAG = receive_data(data_server_socket)## 내가 수정한 부분
 
-    # 데이터를 수신하여 FLAG 값을 확인
-    FLAG_msg = receive_data(data_server_socket)
-    FLAG_msg = FLAG_msg.decode()  # bytes를 str로 변환
-    
-    if FLAG_msg.startswith("FLAG:"):
-        _, flag_value = FLAG_msg.split(":")
-        FLAG = int(flag_value)
-
     if FLAG == 1:
         print("데이터 서버에서 FLAG:1 수신. 파일 요청 시작.")
 
-        while FLAG:
+        while FLAG == 1:
             data = receive_data(conn)
             if not data:
                 break
@@ -232,13 +228,13 @@ def handle_client(conn, addr):
                     if file_num in cache:
                         #캐시 히트
                         file_data, file_size_kb = cache[file_num]
-                        conn.sendall("Cache Hit".encode())
+                        conn.sendall(f"Cache Hit".encode())
                         # file_size_kb = cache[file_num]
                         send_file(conn, file_data, file_size_kb, CACHE_TO_CLIENT_SPEED)
                         print(f"Cache Hit: {file_num}번 파일 캐시에서 {CACHE_TO_CLIENT_SPEED}로 전송")
                     else:
                         # 캐시 미스
-                        conn.sendall("Cache Miss".encode())
+                        conn.sendall(f"Cache Miss".encode())
                         print(f"Cache Miss: {file_num}번 파일 캐시에 없음, 데이터 서버로 요청")
                         
     conn.close()
