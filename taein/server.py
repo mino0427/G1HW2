@@ -19,6 +19,8 @@ data_array = [0] * 10001 #클라이언트의 요청 횟수를 저장한다.
 FLAG=1 #프로그램 시작과 종료를 알리는 FLAG 변수(1: 시작, 0: 종료)
 Max=[2,1] #Max[0]은 짝수 캐시에 보낸 가장 큰 파일 번호, Max[1]은 홀수 캐시에 보낸 가장 큰 파일 번호
 processed_file=0
+buffer=''#버퍼 역할을 함
+
 
 virtual_files_lock = threading.Lock()
 
@@ -190,19 +192,32 @@ def set_cache(): #홀짝캐시에게 25MB만큼의 데이터 전송하기
 
 # 데이터를 청크 단위로 받는 함수
 def receive_data(socket):
-    data = b''
+    global buffer  # 전역 buffer 사용
+
     while True:
         try:
+            # buffer에 '\n'이 있으면, 메시지를 분리하여 반환
+            if '\n' in buffer:
+                message, buffer = buffer.split('\n', 1)
+                return message  # 메시지를 반환하고, 나머지는 buffer에 남겨 둠
+
+            # 새 데이터를 수신하여 buffer에 추가
             chunk = socket.recv(4096).decode()
             if not chunk:
-                break
-            data += chunk.encode()  # 문자열을 다시 바이트로 변환하여 추가
-            # 메시지 끝을 확인하기 위해 줄바꿈을 사용
-            if '\n' in chunk:
-                break
-        except:
+                break  # 연결 종료 시
+
+            buffer += chunk  # 새로 받은 데이터를 buffer에 추가
+
+            # buffer에 '\n'이 포함된 경우 메시지와 남은 데이터를 분리
+            if '\n' in buffer:
+                message, buffer = buffer.split('\n', 1)
+                return message  # 메시지를 반환하고, 나머지는 buffer에 남겨 둠
+
+        except Exception as e:
+            print(f"데이터 수신 중 오류 발생: {e}")
             break
-    return data.decode()
+
+
 
 def request_processing(conn, addr): 
     global data_array  # 전역 변수를 함수 내에서 사용하기 위해 선언
@@ -216,14 +231,12 @@ def request_processing(conn, addr):
     while FLAG:
         try:
             # 데이터를 청크 단위로 수신
-            data = receive_data(conn)
-            if not data:
+            message = receive_data(conn)
+            if not message :
                 break  # 연결이 종료되면 루프 탈출
 
             # '\n'이 메시지의 끝을 의미하므로 이를 기준으로 메시지 처리
-            while '\n' in data:
-                # '\n'을 기준으로 메시지를 분리
-                message, data = data.split('\n', 1)
+            while FLAG:
                 # 요청 메시지 형식 구분: REQUEST로 시작하는 파일 요청
                 if message.startswith("REQUEST:"):
                     _, file_num_str = message.split(":")  # "REQUEST:file_num" 형식
