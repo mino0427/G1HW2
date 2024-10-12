@@ -134,11 +134,21 @@ def start_client():
         data = data_server_conn.recv(1024).decode()
         server_info = data.strip().split(':')  # ':'으로 구분
 
-        # IP와 포트는 짝으로 구성되므로 두 개씩 처리
-        for i in range(0, len(server_info)):
-            cache_host = server_info[i][0]  # IP 주소
-            cache_port = int(server_info[i][1])  # 포트 번호
-            cache_servers.append((cache_host, cache_port))  # 튜플로 (IP, 포트)를 리스트에 저장
+         # IP와 포트는 짝으로 구성되므로 두 개씩 처리
+        for i in range(0, len(server_info), 2):
+            try:
+                cache_host = server_info[i].strip()  # IP 주소
+                cache_port = int(server_info[i + 1].strip())  # 포트 번호
+                cache_servers.append((cache_host, cache_port))  # 튜플로 (IP, 포트)를 리스트에 저장
+            except IndexError:
+                print(f"캐시 서버 정보가 부족합니다. 인덱스: {i}")
+                continue
+
+        # # IP와 포트는 짝으로 구성되므로 두 개씩 처리
+        # for i in range(0, len(server_info)):
+        #     cache_host = server_info[i][0]  # IP 주소
+        #     cache_port = int(server_info[i][1])  # 포트 번호
+        #     cache_servers.append((cache_host, cache_port))  # 튜플로 (IP, 포트)를 리스트에 저장
                 
     except Exception as e:
         print(f"데이터 서버에 연결하여 캐시 서버 정보 수신 중 오류 발생: {e}")
