@@ -26,7 +26,7 @@ def create_virtual_files():
     global virtual_files
     print("가상 파일 크기 정보 생성 시작...")
     with virtual_files_lock:
-        for file_num in range(1, 100001):
+        for file_num in range(1, 10001):
             file_size_kb = file_num  # 파일 크기는 1 ~ 100,000 KB
             virtual_files[file_num] = file_size_kb  # 파일 크기만 저장 (KB 단위)
     print(f"총 {len(virtual_files)}개의 가상 파일 크기 정보 생성 완료!")
@@ -82,12 +82,7 @@ def send_file(conn, file_num, file_size_kb, speed_kbps):
     # 캐시, 클라이언트에 따라 data_array 업데이트 하기
     node = identify_connection(conn)
 
-    if node == "client":
-        processed_file += 1
-        data_array[file_num] -= 1
-    else:
-        processed_file -= data_array[file_num]
-        data_array[file_num] = 0
+
 
     # 파일 요청 횟수 생성
     request_cnt = data_array[file_num]
@@ -107,7 +102,7 @@ def send_file(conn, file_num, file_size_kb, speed_kbps):
     header_message = f"FILE:{file_num}:".encode()
 
     # tail 메시지 생성
-    tail_message = f":{next_file_num}:{request_cnt}".encode()
+    tail_message = f":{next_file_num}:{request_cnt}\n".encode()
 
     # 전체 전송 크기 계산
     total_bytes = file_size_kb * 1024 // 8  # 가상 파일의 크기를 바이트로 변환
@@ -129,6 +124,14 @@ def send_file(conn, file_num, file_size_kb, speed_kbps):
         chunk = full_message[sent_bytes:sent_bytes + chunk_size]  # 청크 데이터 추출
         conn.sendall(chunk)  # 청크 전송
         sent_bytes += chunk_size
+
+    #data_array 업데이트
+    if node == "client":
+        processed_file += 1
+        data_array[file_num] -= 1
+    else:
+        processed_file -= data_array[file_num]
+        data_array[file_num] = 0
 
     print(f"파일 전송 완료: 파일 번호 {file_num}, 크기 {file_size_kb} KB, 실제 소요 시간 {transfer_time:.2f}초")
 

@@ -26,6 +26,8 @@ data_server_socket = None
 data_server_lock = threading.Lock()
 
 
+buffer=''#버퍼 역할을 한다
+
 def connect_to_data_server(host, port):
     global data_server_socket
     try:
@@ -85,26 +87,36 @@ def request_from_data_server(): ######################없어도 될거
         free_space = CACHE_CAPACITY_KB - cache_size
         while FLAG==0:
             try:
-                print(f"데이터 서버로부터 초기 25MB 파일 수신 중...")
+                
                 file_size_kb = 25 * 1024  # 25MB를 KB로 변환
-                file_data = receive_data(data_server_socket)
-
-                message = file_data.decode(errors='ignore')
+                message = receive_data(data_server_socket)
+                print("검문")
+               
                 # file 데이터로 받아야됌
                 if message.startswith("FILE:"):
                     # 파일 데이터 수신
                     try:
-                        _, file_num, file_data, max_file_num, request_cnt = message.split(":", 4)[0:4], data[len("FILE:{file_num}:".format(file_num=file_num)):]
-                        received_file_num = int(received_file_num)
-                        max_file_num = int(max_file_num)
-                        request_cnt = int(request_cnt)
-                        file_data = file_data.encode()
-                
-                        if received_file_num != file_num:
-                            print(f"받은 파일 번호가 요청한 파일 번호와 다릅니다.")
-                            return None, None
+                        # 1. FILE 번호와 그 이후의 데이터를 분리
+                        parts = message.split(":")
+                        if len(parts) < 4:
+                            raise ValueError("잘못된 메시지 형식")
 
-                        file_size_kb = len(file_data) // 1024  # 바이트를 KB로 변환
+                        file_num = int(parts[1])  # 파일 번호
+                        file_data_and_tail = ":".join(parts[2:])  # 파일 데이터와 그 뒤의 정보
+
+                        # 2. tail 부분에서 request_cnt 추출
+                        tail_index = file_data_and_tail.rfind(":")  # tail에서 request_cnt 전 마지막 구분자 위치 찾기
+                        tail = file_data_and_tail[tail_index + 1:]  # 마지막 구분자 뒤의 request_cnt 추출
+                        request_cnt = int(tail)
+                        file_data,max_file_num,a = file_data_and_tail.split(':')  # 파일 데이터는 마지막 구분자 이전까지
+                        
+                        # 3. max_file_num추출
+                        
+                        max_file_num = int(max_file_num)
+                        
+
+                        # 파일 크기를 실제로 계산
+                        file_size_kb = file_num*1024
                         Max = max_file_num
                     
                     except Exception as e:
@@ -187,19 +199,31 @@ def request_from_data_server(): ######################없어도 될거
                 break
 
 def receive_data(socket):
-    data = b''
+    global buffer  # 전역 buffer 사용
+
     while True:
         try:
+            # buffer에 '\n'이 있으면, 메시지를 분리하여 반환
+            if '\n' in buffer:
+                message, buffer = buffer.split('\n', 1)
+                return message  # 메시지를 반환하고, 나머지는 buffer에 남겨 둠
+
+            # 새 데이터를 수신하여 buffer에 추가
             chunk = socket.recv(4096).decode()
             if not chunk:
-                break
-            data += chunk
-            # 메시지 끝을 확인하기 위해 줄바꿈 또는 특정 구분자를 사용할 수 있습니다.
-            if b'\n' in chunk:
-                break
-        except:
+                break  # 연결 종료 시
+
+            buffer += chunk  # 새로 받은 데이터를 buffer에 추가
+
+            # buffer에 '\n'이 포함된 경우 메시지와 남은 데이터를 분리
+            if '\n' in buffer:
+                message, buffer = buffer.split('\n', 1)
+                return message  # 메시지를 반환하고, 나머지는 buffer에 남겨 둠
+
+        except Exception as e:
+            print(f"데이터 수신 중 오류 발생: {e}")
             break
-    return data
+
 
 def handle_client(conn, addr):
     global FLAG
