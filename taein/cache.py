@@ -11,10 +11,6 @@ DATA_SERVER_PORT = 5000
 CACHE_TO_CLIENT_SPEED = 3000
 DATA_TO_CACHE_SPEED = 2000 
 
-# # 캐시 서버 번호 및 최대 캐시 서버 수
-# MAX_CACHE_SERVERS = 2
-# cache_server_number = None  # 캐시 서버 번호 (1 또는 2)
-
 # 캐시 서버 안에 있는 가장 큰 파일 번호(크기)
 Max = 0
 FLAG = 0  # 기본값 0, 데이터 서버에서 받은 FLAG에 따라 변경
@@ -83,24 +79,6 @@ def send_file(conn, file_num, file_data, file_size_kb, speed_kbps, request_cnt, 
                 # request_cnt 업데이트
                 cache[file_num] = (file_data, file_size_kb, request_cnt)
 
-def receive_max_file_num():
-    global Max, FLAG
-    while True:
-            try:
-                response = data_server_socket.recv(1024).decode()
-                if response.startswith("NEXT:"):
-                    _, max_file_num = response.strip().split(":")
-                    max_file_num = int(max_file_num)
-                    Max = max_file_num
-                    print(f"데이터 서버로부터 Max 값 수신: {Max}")
-                else:
-                    print("데이터 서버로부터 올바른 Max 값을 수신하지 못했습니다.")
-                time.sleep(1)  # 1초 대기 후 다시 요청
-            except Exception as e:
-                print(f"Max 값 수신 중 오류 발생: {e}")
-                break
-
-
 # 데이터 서버에서 파일을 요청하는 함수
 def request_from_data_server(): ######################없어도 될거
         global cache_size, Max, FLAG
@@ -121,10 +99,6 @@ def request_from_data_server(): ######################없어도 될거
         except Exception as e:
             print(f"초기 데이터 수신 중 오류 발생: {e}")
 
-        # 데이터 서버에서 Max 값을 지속적으로 수신하는 스레드 시작
-        max_file_num_thread = threading.Thread(target=receive_max_file_num)
-        max_file_num_thread.start()
-
         # free_space > Max 조건이 만족될 때까지 대기
         while True: # 이 True 부분을 Flag로 바꿔서 FLAG:0을 받으면 종료 (종료하면 쓰레드도 같이 종료됌)
             try:
@@ -142,7 +116,6 @@ def request_from_data_server(): ######################없어도 될거
 
                 if FLAG == 1 and free_space >= Max:
                     print(f"free_space({free_space} KB) >= Max({Max}) 조건 만족")
-                    file_num = Max
                     with data_server_lock:
                         try:
                             data_server_socket.sendall(f"REQUEST:{file_num}".encode())
@@ -166,6 +139,7 @@ def request_from_data_server(): ######################없어도 될거
                                         return None, None
 
                                     file_size_kb = len(file_data) // 1024  # 바이트를 KB로 변환
+                                    Max = max_file_num
                             
                                 # 캐시 용량 검사 및 파일 저장
                                     with cache_lock:
