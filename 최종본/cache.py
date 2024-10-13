@@ -1,6 +1,20 @@
 import socket
 import threading
 import time
+import logging
+
+log_file1 = "cache1.txt"
+log_file2 = "cache2.txt"
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_file1),
+        logging.FileHandler(log_file2),
+        logging.StreamHandler()  # 콘솔에도 출력
+    ]
+)
 
 # 고유 포트는 운영체제에서 자동으로 할당받음
 HOST = '0.0.0.0'
@@ -35,8 +49,10 @@ def connect_to_data_server(host, port):
         data_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         data_server_socket.connect((host, port))
         print(f"데이터 서버 {host}:{port}에 연결되었습니다.")
+        logging.debug(f"데이터 서버 {host}:{port}에 연결되었습니다.")
     except Exception as e:
         print(f"데이터 서버에 연결 중 오류 발생: {e}")
+        logging.debug(f"데이터 서버에 연결 중 오류 발생: {e}")
         data_server_socket = None
 
 # 파일 전송 시간 계산 및 전송 처리
@@ -66,12 +82,14 @@ def send_file(conn, file_num, file_data, request_cnt, max_file_num):
             # request_cnt 값을 1 감소
             request_cnt -= 1
             print(f"파일 {file_num}의 request_cnt 감소: {request_cnt}")
+            logging.debug(f"파일 {file_num}의 request_cnt 감소: {request_cnt}")
 
             # request_cnt가 0이면 캐시에서 해당 파일 삭제
             if request_cnt <= 0:
                 del cache[file_num]
                 cache_size -= file_num
                 print(f"파일 {file_num}의 request_cnt가 0이 되어 캐시에서 제거되었습니다. 현재 캐시 사용량: {cache_size} KB")
+                logging.debug(f"파일 {file_num}의 request_cnt가 0이 되어 캐시에서 제거되었습니다. 현재 캐시 사용량: {cache_size} KB")
             else:
                 # request_cnt 업데이트
                 cache[file_num] = (file_data, request_cnt)
@@ -112,6 +130,7 @@ def request_from_data_server():
                         
                     except Exception as e:
                         print(f"데이터 서버에서 파일 수신 중 오류")
+                        logging.debug(f"데이터 서버에서 파일 수신 중 오류")
                 
                 elif message.startswith("FLAG:"):
                     # 정확한 문자열 비교를 수행
@@ -119,6 +138,7 @@ def request_from_data_server():
                     if flag_value.strip() == "1":
                         FLAG = 1
                         print("FLAG 1을 수신했습니다.")
+                        logging.debug("FLAG 1을 수신했습니다.")
                         break
 
                 if file_data:
@@ -126,10 +146,12 @@ def request_from_data_server():
                         cache[file_num] = (file_data, request_cnt)
                         cache_size += file_num
                         free_space = CACHE_CAPACITY_KB - cache_size
-                        print(f"cache_size: {cache_size}, 데이터 서버로 부터 받은 파일: {file_num}, 남은 공간: {free_space}")                
+                        print(f"cache_size: {cache_size}, 데이터 서버로 부터 받은 파일: {file_num}, 남은 공간: {free_space}")
+                        logging.debug(f"cache_size: {cache_size}, 데이터 서버로 부터 받은 파일: {file_num}, 남은 공간: {free_space}")                
 
             except Exception as e:
                 print(f"초기 데이터 수신 중 오류 발생: {e}")
+                logging.debug(f"초기 데이터 수신 중 오류 발생: {e}")
                 break
        
         while True:
@@ -141,17 +163,21 @@ def request_from_data_server():
                     _, flag_value = response.strip().split(":")
                     FLAG = int(flag_value)
                     print(f"데이터 서버로부터 FLAG 값 수신: {FLAG}")
+                    logging.debug(f"데이터 서버로부터 FLAG 값 수신: {FLAG}")
                     # FLAG가 0이면 종료
                     if FLAG == 0:
                         print("FLAG:0 수신 - 수신 작업을 종료합니다.")
+                        logging.debug("FLAG:0 수신 - 수신 작업을 종료합니다.")
                         break
 
-                if FLAG == 1 and free_space >= Max:        
-                    print(f"free_space({free_space} KB) >= Max({Max}) 조건 만족")
+                if FLAG == 1 and free_space >= Max:
+                    print(f"free_space({free_space} KB) >= Max({Max}) 조건 만족")        
+                    logging.debug(f"free_space({free_space} KB) >= Max({Max}) 조건 만족")
                     with data_server_lock:
                         try:
                             data_server_socket.sendall(f"REQUEST:{file_num}".encode())
                             print(f"데이터 서버에 검문 {file_num}번 파일 요청 전송")
+                            logging.debug(f"데이터 서버에 검문 {file_num}번 파일 요청 전송")
                             # 데이터 서버로부터 파일 수신
                             data = receive_data(data_server_socket)
 
@@ -175,20 +201,27 @@ def request_from_data_server():
                                             cache_size += file_num
                                             free_space = CACHE_CAPACITY_KB - cache_size
                                             print(f"파일 {file_num}을(를) 캐시에 저장했습니다. 현재 캐시 사용량: {cache_size} KB")
+                                            logging.debug(f"파일 {file_num}을(를) 캐시에 저장했습니다. 현재 캐시 사용량: {cache_size} KB")
+
                                         else:
                                             print(f"캐시 용량 부족으로 파일 {file_num}을(를) 캐시에 저장하지 못했습니다.")
+                                            logging.debug(f"캐시 용량 부족으로 파일 {file_num}을(를) 캐시에 저장하지 못했습니다.")
                                 except ValueError as e:
                                     print(f"파일 메시지 파싱 중 오류 발생: {e}")
+                                    logging.debug(f"파일 메시지 파싱 중 오류 발생: {e}")
                                     return None, None    
                                                                         
                             else:
                                 print(f"알 수 없는 데이터 서버 응답: {message}")
+                                logging.debug(f"알 수 없는 데이터 서버 응답: {message}")
                                 return None, None
                         except Exception as e:
                             print(f"데이터 서버에서 파일 수신 중 오류 발생: {e}")
+                            logging.debug(f"데이터 서버에서 파일 수신 중 오류 발생: {e}")
                             return None, None
             except Exception as e:
                 print(f"데이터 서버에서 파일 수신 중 오류 발생: {e}")
+                logging.debug(f"데이터 서버에서 파일 수신 중 오류 발생: {e}")
                 break
 
 def receive_data(socket):
@@ -219,12 +252,14 @@ def receive_data(socket):
 
         except Exception as e:
             print(f"데이터 수신 중 오류 발생: {e}")
+            logging.debug(f"데이터 수신 중 오류 발생: {e}")
             break
 
 
 def handle_client(conn, addr):
     global FLAG
     print(f"연결된 클라이언트: {addr}")
+    logging.debug(f"연결된 클라이언트: {addr}")
     ###############################FLAG가 0인 경우 그냥 이 부분을 넘어가버림#############수정필요################
     # FLAG = receive_data(data_server_socket)## 내가 수정한 부분
     
@@ -235,6 +270,7 @@ def handle_client(conn, addr):
 
     if FLAG == 1:
         print("데이터 서버에서 FLAG:1 수신. 파일 요청 시작.")
+        logging.debug("데이터 서버에서 FLAG:1 수신. 파일 요청 시작.")
 
         while True:
             message = receive_data(conn)
@@ -247,6 +283,7 @@ def handle_client(conn, addr):
                 _, file_num = message.strip().split(":")
                 file_num = int(file_num)
                 print(f"클라이언트로부터 파일 {file_num} 요청 수신")
+                logging.debug(f"클라이언트로부터 파일 {file_num} 요청 수신")
             
             # 캐시에 있는지 확인
             if file_num in cache:
@@ -255,14 +292,17 @@ def handle_client(conn, addr):
                 conn.sendall("Cache Hit\n".encode())
                 send_file(conn, file_num,file_data, request_cnt,Max)
                 print(f"Cache Hit: {file_num}번 파일 캐시에서 {CACHE_TO_CLIENT_SPEED}로 전송")
+                logging.debug(f"Cache Hit: {file_num}번 파일 캐시에서 {CACHE_TO_CLIENT_SPEED}로 전송")
             else:
                 # 캐시 미스
                 conn.sendall("Cache Miss\n".encode())
                 print(f"Cache Miss: {file_num}번 파일 캐시에 없음, 데이터 서버로 요청")
+                logging.debug(f"Cache Miss: {file_num}번 파일 캐시에 없음, 데이터 서버로 요청")
 
                         
     conn.close()
     print(f"클라이언트 연결 종료: {addr}")
+    logging.debug(f"클라이언트 연결 종료: {addr}")
 
 # 데이터 서버 연결 종료 함수
 def close_data_server_connection():
@@ -271,6 +311,7 @@ def close_data_server_connection():
         data_server_socket.close()
         data_server_socket = None
         print("데이터 서버와의 연결이 종료되었습니다.")
+        logging.debug("데이터 서버와의 연결이 종료되었습니다.")
     
     #flag추가
 
@@ -281,6 +322,7 @@ def start_cache_server():
     # 데이터 서버에 연결
     connect_to_data_server(DATA_SERVER_HOST, DATA_SERVER_PORT)
     print(f"데이터 서버 {DATA_SERVER_HOST}:{DATA_SERVER_PORT}에 연결")
+    logging.debug(f"데이터 서버 {DATA_SERVER_HOST}:{DATA_SERVER_PORT}에 연결")
     
     try:
         # 캐시 서버 소켓 설정 (자동 포트 할당)
@@ -288,12 +330,14 @@ def start_cache_server():
         server.bind((HOST, 0))  # 운영체제가 자동으로 사용 가능한 포트 할당
         cache_port = server.getsockname()[1]  # 할당받은 포트 번호 확인
         print(f"캐시 서버의 할당된 포트 번호: {cache_port}")
+        logging.debug(f"캐시 서버의 할당된 포트 번호: {cache_port}")
 
         # 데이터 서버에 캐시 서버 포트 번호 전송
         data_server_socket.sendall(f"{cache_port}".encode())
 
     except Exception as e:
         print(f"데이터 서버 연결 중 예외 발생: {e}")
+        logging.debug(f"데이터 서버 연결 중 예외 발생: {e}")
         return
     
     ###################cache 초기화################################################################3333    
@@ -306,6 +350,7 @@ def start_cache_server():
     # 캐시 서버 실행
     server.listen()
     print(f"Cache_server가 {HOST}:{cache_port}에서 실행 중입니다.")
+    logging.debug(f"Cache_server가 {HOST}:{cache_port}에서 실행 중입니다.")
 
     for i in range(0,4):#####수정함 이렇게 해도 되겠지?#####################여기서 4개 받고 끝이 아니라 계속 accept 대기 하고 있는 건가?#########
         conn, addr = server.accept()

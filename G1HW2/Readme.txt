@@ -89,6 +89,8 @@
 - receive_file()로 받은 data를 virtual_storage()에 저장
 
 
+
+
 2. 소스코드 컴파일 방법 (GCP 사용)
 
 ① 구글 클라우드에 접속하여 VM instance를 생성한다.
@@ -121,6 +123,12 @@
 ⑦ 로컬에서 powershell 터미널 6개를 열어 터미널 2개는 python3 cache.py로 캐시 서버를 실행시키고, 나머지 터미널 4개는 python3 client.py로 client를 실행한다. (vscode에서 실행해도 됨)
 	
 ⑧ 2개의 Cache server와 4개의 client가 모두 연결되면 프로그램이 실행된다.
+
+☆주의할 점 : cache.py와 client.py의 DATA_SERVER_HOST가 외부 서버 IP인지 확인한다
+
+
+
+
 
 3. 규칙 및 알고리즘 설명
 
@@ -197,6 +205,11 @@ cache는 client로 부터 다운 완료 신호와 데이터 서버로 부터 종
     
 - Cache Hit/ Cache Miss
 
+
+
+
+
+
 4. Error or Additional Message Handling
 ▶ Additional Message Handling
 
@@ -259,6 +272,10 @@ cache는 client로 부터 다운 완료 신호와 데이터 서버로 부터 종
 
 ② 소켓 연결 종료 처리(Graceful Termination)
 	- 모든 파일 요청이 완료된 후 캐시 서버와 데이터 서버와의 연결을 안전하게 종료하기 위해 cache_conn.close()와 data_server_conn.close()를 사용하여 종료
+
+
+
+
 
 5. Additional Comments (팀플 날짜 기록)
 2024/10/05

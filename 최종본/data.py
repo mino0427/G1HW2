@@ -1,7 +1,18 @@
 import socket
 import threading
 import time
+import logging
 
+log_file = "data.txt"
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_file),
+        logging.StreamHandler()  # 콘솔에도 출력
+    ]
+)
 
 HOST = '0.0.0.0'
 PORT = 5000
@@ -27,11 +38,13 @@ virtual_files_lock = threading.Lock()
 def create_virtual_files():
     global virtual_files
     print("가상 파일 크기 정보 생성 시작...")
+    logging.debug("가상 파일 크기 정보 생성 시작...")
 #    with virtual_files_lock:
     for file_num in range(1, 10001):
         file_size_kb = file_num  # 파일 크기는 1 ~ 100,000 KB
         virtual_files[file_num] = file_size_kb  # 파일 크기만 저장 (KB 단위)
     print(f"총 {len(virtual_files)}개의 가상 파일 크기 정보 생성 완료!")
+    logging.debug(f"총 {len(virtual_files)}개의 가상 파일 크기 정보 생성 완료!")
 
 
 def find_next_file_num(conn):#캐시가 받아야할 다음 파일 정보를 알려주기 위함
@@ -77,6 +90,7 @@ def identify_connection(conn):
     
     # 리스트에서 찾을 수 없는 경우
     print("이 연결은 캐시 서버나 클라이언트가 아닙니다.")
+    logging.debug("이 연결은 캐시 서버나 클라이언트가 아닙니다.")
     return "unknown"
 
 # 파일 전송 시간 계산 및 전송 처리 함수
@@ -114,6 +128,7 @@ def send_file(conn, file_num, file_size_kb, speed_kbps):
 
     transfer_time = file_size_kb / speed_kbps  # 전송에 필요한 시간 계산
     print(f"파일 전송 시작: 파일 번호 {file_num}, 크기 {file_size_kb} KB, 예상 소요 시간 {transfer_time:.2f}초")
+    logging.debug(f"파일 전송 시작: 파일 번호 {file_num}, 크기 {file_size_kb} KB, 예상 소요 시간 {transfer_time:.2f}초")
 
     #time.sleep(transfer_time)  # 전송 시간 동안 대기
 
@@ -141,6 +156,7 @@ def send_file(conn, file_num, file_size_kb, speed_kbps):
         data_array[file_num] = 0
 
     print(f"파일 전송 완료: 파일 번호 {file_num}, 크기 {file_size_kb} KB, 실제 소요 시간 {transfer_time:.2f}초")
+    logging.debug(f"파일 전송 완료: 파일 번호 {file_num}, 크기 {file_size_kb} KB, 실제 소요 시간 {transfer_time:.2f}초")
 
     # 모든 파일이 처리되었는지 확인 후 종료 처리
     if processed_file <= 0:
@@ -194,6 +210,7 @@ def set_cache(): #홀짝캐시에게 25MB만큼의 데이터 전송하기
 
 
     print("홀짝 캐시 서버로 25MB 이내의 파일을 전송 완료했습니다.")
+    logging.debug("홀짝 캐시 서버로 25MB 이내의 파일을 전송 완료했습니다.")
 
 # 데이터를 청크 단위로 받는 함수
 def receive_data(socket):
@@ -221,6 +238,7 @@ def receive_data(socket):
 
         except Exception as e:
             print(f"데이터 수신 중 오류 발생: {e}")
+            logging.debug(f"데이터 수신 중 오류 발생: {e}")
             break
 
 
@@ -233,6 +251,7 @@ def request_processing(conn, addr):
     global DATA_TO_CLIENT_SPEED
     
     print(f"연결된 {addr}로부터 파일 요청 처리 시작")
+    logging.debug(f"연결된 {addr}로부터 파일 요청 처리 시작")
 
     while FLAG:
         try:
@@ -250,18 +269,21 @@ def request_processing(conn, addr):
                 _, file_num_str = message.split(":")  # "REQUEST:file_num" 형식
                 file_num = int(file_num_str)
                 print(f"데이터 서버: {addr}로부터 {file_num}번 파일 요청 수신")
+                logging.debug(f"데이터 서버: {addr}로부터 {file_num}번 파일 요청 수신")
 
                 # 요청한 파일의 크기 계산 및 전송 처리
                 #with virtual_files_lock:
                 if file_num in virtual_files:
                     file_size_kb = file_num  # 파일 크기(KB) 계산
                     print(f"데이터 서버: {file_num}번 파일을 전송 준비 중 (크기: {file_size_kb} KB)")
+                    logging.debug(f"데이터 서버: {file_num}번 파일을 전송 준비 중 (크기: {file_size_kb} KB)")
 
                     # send_file 함수를 사용하여 파일 전송
                     send_file(conn, file_num, file_size_kb, DATA_TO_CLIENT_SPEED)
 
                 else:
                     print(f"데이터 서버: {file_num}번 파일을 찾을 수 없음")
+                    logging.debug(f"데이터 서버: {file_num}번 파일을 찾을 수 없음")
                     continue
                     #conn.sendall(f"파일을 찾을 수 없습니다: {file_num}".encode())
 
@@ -270,7 +292,7 @@ def request_processing(conn, addr):
                 _, random_list_str = message.split(":", 1)  # "RANDOM:random_list" 형식
                 random_list = random_list_str.split(":")  # 쉼표로 구분된 random_list 받기
                 random_list = [int(num) for num in random_list]  # 파일 번호 목록을 정수로 변환
-                #print(f"데이터 서버: {addr}로부터 랜덤 파일 목록 수신: {random_list[:10]}... (총 {len(random_list)}개 파일)")
+                #logging.debug(f"데이터 서버: {addr}로부터 랜덤 파일 목록 수신: {random_list[:10]}... (총 {len(random_list)}개 파일)")
 
                 # random_list를 참고하여 data_array 업데이트
                 for file_num in random_list:
@@ -286,10 +308,12 @@ def request_processing(conn, addr):
                     
             else:
                 print(f"잘못된 요청 형식 수신: {message}")
+                logging.debug(f"잘못된 요청 형식 수신: {message}")
                 continue
 
         except ValueError:
             print(f"잘못된 파일 번호 수신: {_}")
+            logging.debug(f"잘못된 파일 번호 수신: {_}")
             continue
 
     conn.close()
@@ -320,6 +344,7 @@ def send_flag_to_all():
             client_conn[0].sendall(f"FLAG:{FLAG}\n".encode())  # client_conn[0]는 conn 객체
         
     print(f"모든 캐시 서버와 클라이언트에게 FLAG:{FLAG} 메시지를 전송했습니다.")
+    logging.debug(f"모든 캐시 서버와 클라이언트에게 FLAG:{FLAG} 메시지를 전송했습니다.")
 
 
 
@@ -334,12 +359,15 @@ def start_server():
 
     # 데이터 서버 실행 중이라는 메시지 출력
     print(f"Data Server가 {HOST}:{PORT}에서 실행 중입니다...")
+    logging.debug(f"Data Server가 {HOST}:{PORT}에서 실행 중입니다...")
 
     # 먼저 캐시 서버 2개와 연결
     print("캐시 서버와 연결 중...")
+    logging.debug("캐시 서버와 연결 중...")
     for i in range(2):  # 캐시 서버 2개 연결
         conn, addr = server.accept()
         print(f"캐시 서버 {i + 1} 연결 완료: {addr}")
+        logging.debug(f"캐시 서버 {i + 1} 연결 완료: {addr}")
         #thread = threading.Thread(target=handle_cache_server, args=(conn, addr))
         #thread.start()#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1나중에 handle_cache를 수정하고 나서 스레드 한번 더 생각해보자
         #     print(f"연결된 캐시 서버: {addr}")
@@ -351,6 +379,7 @@ def start_server():
 
     # 캐시 서버와 연결 후 클라이언트와 연결
     print("클라이언트 연결 대기 중...")
+    logging.debug("클라이언트 연결 대기 중...")
 
 
     # 4개의 클라이언트가 모두 연결될 때까지 대기
@@ -358,14 +387,18 @@ def start_server():
         conn, addr = server.accept()
         client_conns.append((conn, addr))
         print(f"클라이언트 연결 완료: {addr}")
+        logging.debug(f"클라이언트 연결 완료: {addr}")
 
         # 클라이언트에게 캐시 서버 정보를 전송
         print(cache_servers[0])
         print(cache_servers[1])
+        logging.debug(cache_servers[0])
+        logging.debug(cache_servers[1])
         conn.sendall(f"{cache_servers[0]}:{cache_servers[1]}".encode())
 
     # 4개의 클라이언트가 연결된 후에 요청 처리 시작
     print(f"모든 클라이언트가 연결됨. 파일 전송 시작.")
+    logging.debug(f"모든 클라이언트가 연결됨. 파일 전송 시작.")
     for conn, addr in client_conns:
         thread = threading.Thread(target=request_processing, args=(conn, addr))
         thread.start()
