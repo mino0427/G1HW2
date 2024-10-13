@@ -121,7 +121,7 @@ def request_from_data_server():
                         FLAG = 1
                         print("FLAG 1을 수신했습니다.")
                         break
-                    
+
                 if file_data:
                     with cache_lock:
                         cache[file_num] = (file_data, request_cnt)
@@ -133,57 +133,61 @@ def request_from_data_server():
                 print(f"초기 데이터 수신 중 오류 발생: {e}")
                 break
        
-        while flag_value == 1 and free_space >= Max: 
+        while True:
             try:
-                print(f"free_space({free_space} KB) >= Max({Max}) 조건 만족")
-                with data_server_lock:
-                    try:
-                        data_server_socket.sendall(f"REQUEST:{file_num}".encode())
-                        print(f"데이터 서버에 {file_num}번 파일 요청 전송")
-                        # 데이터 서버로부터 파일 수신
-                        data = receive_data(data_server_socket)
+                response = data_server_socket.recv(1024).decode()
+                # FLAG 메시지 처리
+                if response.startswith("FLAG:"):
+                    # ':'로 구분하여 FLAG 값 추출
+                    _, flag_value = response.strip().split(":")
+                    FLAG = int(flag_value)
+                    print(f"데이터 서버로부터 FLAG 값 수신: {FLAG}")
+                    # FLAG가 0이면 종료
+                    if FLAG == 0:
+                        print("FLAG:0 수신 - 수신 작업을 종료합니다.")
+                        break
 
-                        message = data.decode(errors='ignore')
+                if FLAG == 1 and free_space >= Max:        
+                    print(f"free_space({free_space} KB) >= Max({Max}) 조건 만족")
+                    with data_server_lock:
+                        try:
+                            data_server_socket.sendall(f"REQUEST:{file_num}".encode())
+                            print(f"데이터 서버에 {file_num}번 파일 요청 전송")
+                            # 데이터 서버로부터 파일 수신
+                            data = receive_data(data_server_socket)
 
-                        if message.startswith("FILE:"):
-                            # 파일 데이터 수신
-                            try:
-                                _, file_num, file_data, max_file_num, request_cnt = message.split(":", 4)[0:4], data[len("FILE:{file_num}:".format(file_num=file_num)):]
-                                file_num = int(file_num)
-                                max_file_num = int(max_file_num)
-                                request_cnt = int(request_cnt)
-                                file_data = file_data.encode()
+                            message = data.decode(errors='ignore')
 
-                                Max = max_file_num
-                            
-                                # 캐시 용량 검사 및 파일 저장
-                                with cache_lock:
-                                    if cache_size + file_num <= CACHE_CAPACITY_KB:
-                                        cache[file_num] = (file_data, request_cnt)
-                                        cache_size += file_num
-                                        free_space = CACHE_CAPACITY_KB - cache_size
-                                        print(f"파일 {file_num}을(를) 캐시에 저장했습니다. 현재 캐시 사용량: {cache_size} KB")
-                                    else:
-                                        print(f"캐시 용량 부족으로 파일 {file_num}을(를) 캐시에 저장하지 못했습니다.")
-                            except ValueError as e:
-                                print(f"파일 메시지 파싱 중 오류 발생: {e}")
-                                return None, None    
-                        
-                        # FLAG 메시지 처리
-                        elif message.startswith("FLAG:"):
-                            # ':'로 구분하여 FLAG 값 추출
-                            _, flag_value = message.split(":")
-                            if flag_value.strip() == "0":
-                                FLAG = 0
-                                print("FLAG 0을 수신했습니다 - 작업 종료.")
-                                break
-                                             
-                        else:
-                            print(f"알 수 없는 데이터 서버 응답: {message}")
+                            if message.startswith("FILE:"):
+                                # 파일 데이터 수신
+                                try:
+                                    _, file_num, file_data, max_file_num, request_cnt = message.split(":", 4)[0:4], data[len("FILE:{file_num}:".format(file_num=file_num)):]
+                                    file_num = int(file_num)
+                                    max_file_num = int(max_file_num)
+                                    request_cnt = int(request_cnt)
+                                    file_data = file_data.encode()
+
+                                    Max = max_file_num
+                                
+                                    # 캐시 용량 검사 및 파일 저장
+                                    with cache_lock:
+                                        if cache_size + file_num <= CACHE_CAPACITY_KB:
+                                            cache[file_num] = (file_data, request_cnt)
+                                            cache_size += file_num
+                                            free_space = CACHE_CAPACITY_KB - cache_size
+                                            print(f"파일 {file_num}을(를) 캐시에 저장했습니다. 현재 캐시 사용량: {cache_size} KB")
+                                        else:
+                                            print(f"캐시 용량 부족으로 파일 {file_num}을(를) 캐시에 저장하지 못했습니다.")
+                                except ValueError as e:
+                                    print(f"파일 메시지 파싱 중 오류 발생: {e}")
+                                    return None, None    
+                                                                        
+                            else:
+                                print(f"알 수 없는 데이터 서버 응답: {message}")
+                                return None, None
+                        except Exception as e:
+                            print(f"데이터 서버에서 파일 수신 중 오류 발생: {e}")
                             return None, None
-                    except Exception as e:
-                        print(f"데이터 서버에서 파일 수신 중 오류 발생: {e}")
-                        return None, None
             except Exception as e:
                 print(f"데이터 서버에서 파일 수신 중 오류 발생: {e}")
                 break
