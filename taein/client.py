@@ -4,7 +4,7 @@ import random
 
 DATA_SERVER_HOST = '127.0.0.1'
 DATA_SERVER_PORT = 5000
-MAX_FILES = 1000  # 클라이언트가 수신할 파일 개수
+MAX_FILES = 100  # 클라이언트가 수신할 파일 개수
 DOWNLOAD_SPEED_FROM_DATA_SERVER = 1000  # 데이터 서버에서 다운로드 속도 (1 Mbps = 1000 kb/s)
 DOWNLOAD_SPEED_FROM_CACHE_SERVER = 3000  # 캐시 서버에서 다운로드 속도 (3 Mbps = 3000 kb/s)
 virtual_storage = {}  # 클라이언트가 받은 가상파일을 저장할 공간
@@ -185,7 +185,7 @@ def start_client():
         #     # 데이터, 캐시 서버와 연결 유지
 
         while file_request_list:
-            if random.random() < 0.01:  # 20% 확률
+            if random.random() < 0.1:  # 20% 확률
                 file_num = file_request_list.pop(-1)  # 리스트에서 가장 큰 파일
                 print(f"20% 확률로 가장 큰 파일 {file_num} 요청 중...")
             else:

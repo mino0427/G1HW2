@@ -136,10 +136,12 @@ def start_client():
 
         # IP와 포트는 짝으로 구성되므로 두 개씩 처리
         for i in range(0, len(server_info)):
-            cache_host = server_info[i][0]  # IP 주소
-            cache_port = int(server_info[i][1])  # 포트 번호
+            # 문자열에서 IP와 포트 번호 추출
+            info = server_info[i].split(", ")
+            cache_host = info[0].strip("('")  # IP 주소 추출
+            cache_port = int(info[1])         # 포트 번호 추출
             cache_servers.append((cache_host, cache_port))  # 튜플로 (IP, 포트)를 리스트에 저장
-                
+
     except Exception as e:
         print(f"데이터 서버에 연결하여 캐시 서버 정보 수신 중 오류 발생: {e}")
 
