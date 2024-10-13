@@ -57,8 +57,6 @@ def send_file(conn, file_num, file_data, request_cnt, max_file_num):
         chunk = full_message[sent_bytes:sent_bytes + chunk_size].encode() # 수정한 부분
         conn.sendall(chunk)
         sent_bytes += chunk_size
-
-    conn.sendall(f"MSG:파일 전송 완료 {file_num} KB\n".encode())
     
     # request_cnt 감소 및 캐시 정리
     with cache_lock:
