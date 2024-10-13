@@ -27,10 +27,10 @@ virtual_files_lock = threading.Lock()
 def create_virtual_files():
     global virtual_files
     print("가상 파일 크기 정보 생성 시작...")
-    with virtual_files_lock:
-        for file_num in range(1, 10001):
-            file_size_kb = file_num  # 파일 크기는 1 ~ 100,000 KB
-            virtual_files[file_num] = file_size_kb  # 파일 크기만 저장 (KB 단위)
+#    with virtual_files_lock:
+    for file_num in range(1, 10001):
+        file_size_kb = file_num  # 파일 크기는 1 ~ 100,000 KB
+        virtual_files[file_num] = file_size_kb  # 파일 크기만 저장 (KB 단위)
     print(f"총 {len(virtual_files)}개의 가상 파일 크기 정보 생성 완료!")
 
 
@@ -110,7 +110,7 @@ def send_file(conn, file_num, file_size_kb, speed_kbps):
     transfer_time = file_size_kb / speed_kbps  # 전송에 필요한 시간 계산
     print(f"파일 전송 시작: 파일 번호 {file_num}, 크기 {file_size_kb} KB, 예상 소요 시간 {transfer_time:.2f}초")
 
-    time.sleep(transfer_time)  # 전송 시간 동안 대기
+    #time.sleep(transfer_time)  # 전송 시간 동안 대기
 
     # 전체 메시지 생성 (헤더 + 파일 데이터 + tail 메시지)
     file_data = b'X' * total_bytes  # 'X'를 바이트로 변환
@@ -125,7 +125,9 @@ def send_file(conn, file_num, file_size_kb, speed_kbps):
         conn.sendall(chunk)  # 청크 전송
         sent_bytes += chunk_size
 
+
     #data_array 업데이트
+ #   with virtual_files_lock:    
     if node == "client":
         processed_file += 1
         data_array[file_num] -= 1
@@ -232,8 +234,9 @@ def request_processing(conn, addr):
     while FLAG:
         try:
             # 데이터를 청크 단위로 수신
-            message = receive_data(conn)
             print("검문")
+            message = receive_data(conn)
+           
             if not message :
                 break  # 연결이 종료되면 루프 탈출
 
@@ -246,18 +249,18 @@ def request_processing(conn, addr):
                 print(f"데이터 서버: {addr}로부터 {file_num}번 파일 요청 수신")
 
                 # 요청한 파일의 크기 계산 및 전송 처리
-                with virtual_files_lock:
-                    if file_num in virtual_files:
-                        file_size_kb = file_num  # 파일 크기(KB) 계산
-                        print(f"데이터 서버: {file_num}번 파일을 전송 준비 중 (크기: {file_size_kb} KB)")
+                #with virtual_files_lock:
+                if file_num in virtual_files:
+                    file_size_kb = file_num  # 파일 크기(KB) 계산
+                    print(f"데이터 서버: {file_num}번 파일을 전송 준비 중 (크기: {file_size_kb} KB)")
 
-                        # send_file 함수를 사용하여 파일 전송
-                        send_file(conn, file_num, file_size_kb, DATA_TO_CLIENT_SPEED)
+                    # send_file 함수를 사용하여 파일 전송
+                    send_file(conn, file_num, file_size_kb, DATA_TO_CLIENT_SPEED)
 
-                    else:
-                        print(f"데이터 서버: {file_num}번 파일을 찾을 수 없음")
-                        continue
-                        #conn.sendall(f"파일을 찾을 수 없습니다: {file_num}".encode())
+                else:
+                    print(f"데이터 서버: {file_num}번 파일을 찾을 수 없음")
+                    continue
+                    #conn.sendall(f"파일을 찾을 수 없습니다: {file_num}".encode())
 
             # RANDOM:random_list 메시지 처리
             elif message.startswith("RANDOM:"):
@@ -276,7 +279,7 @@ def request_processing(conn, addr):
                 if processed_file == 4000:
                     set_cache()
                     send_flag_to_all()
-                    print("검문2")
+
                     
             else:
                 print(f"잘못된 요청 형식 수신: {message}")

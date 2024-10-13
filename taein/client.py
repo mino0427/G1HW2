@@ -13,7 +13,7 @@ buffer=''
 
 # 랜덤 리스트 생성
 def random_list():
-    random_list = random.sample(range(1, 10001), MAX_FILES)  # 1~10,000 중 1,000개 파일 선택
+    random_list = random.sample(range(1, 1001), MAX_FILES)  # 1~10,000 중 1,000개 파일 선택
     random_list.sort()  # 파일 리스트 정렬
     return random_list
 
@@ -185,7 +185,7 @@ def start_client():
         #     # 데이터, 캐시 서버와 연결 유지
 
         while file_request_list:
-            if random.random() < 0.2:  # 20% 확률
+            if random.random() < 0.01:  # 20% 확률
                 file_num = file_request_list.pop(-1)  # 리스트에서 가장 큰 파일
                 print(f"20% 확률로 가장 큰 파일 {file_num} 요청 중...")
             else:
