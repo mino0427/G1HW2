@@ -185,7 +185,7 @@ def start_client():
         #     # 데이터, 캐시 서버와 연결 유지
 
         while file_request_list:
-            if random.random() < 0.1:  # 20% 확률
+            if random.random() < 0:  # 0% 확률
                 file_num = file_request_list.pop(-1)  # 리스트에서 가장 큰 파일
                 print(f"20% 확률로 가장 큰 파일 {file_num} 요청 중...")
             else:

@@ -57,6 +57,11 @@ def send_file(conn, file_num, file_data, request_cnt, max_file_num):
         chunk = full_message[sent_bytes:sent_bytes + chunk_size].encode() # 수정한 부분
         conn.sendall(chunk)
         sent_bytes += chunk_size
+<<<<<<< HEAD
+=======
+
+    #conn.sendall(f"MSG:파일 전송 완료 {file_num} KB\n".encode())
+>>>>>>> 62726bb42e91d7bfdd644c48d4bedd8d9de09a7c
     
     # request_cnt 감소 및 캐시 정리
     with cache_lock:
@@ -151,7 +156,7 @@ def request_from_data_server():
                     with data_server_lock:
                         try:
                             data_server_socket.sendall(f"REQUEST:{file_num}".encode())
-                            print(f"데이터 서버에 {file_num}번 파일 요청 전송")
+                            print(f"데이터 서버에 검문 {file_num}번 파일 요청 전송")
                             # 데이터 서버로부터 파일 수신
                             data = receive_data(data_server_socket)
 
@@ -239,6 +244,9 @@ def handle_client(conn, addr):
         while True:
             message = receive_data(conn)
            
+            if not message: 
+                continue
+            
             # 메시지와 파일, 요청 구분
             if message.startswith("REQUEST:"):
                 _, file_num = message.strip().split(":")
@@ -250,12 +258,12 @@ def handle_client(conn, addr):
                 if file_num in cache:
                     #캐시 히트
                     file_data, request_cnt = cache[file_num]
-                    conn.sendall("Cache Hit".encode())
+                    conn.sendall("Cache Hit\n".encode())
                     send_file(conn, file_num,file_data, request_cnt,Max)
                     print(f"Cache Hit: {file_num}번 파일 캐시에서 {CACHE_TO_CLIENT_SPEED}로 전송")
                 else:
                     # 캐시 미스
-                    conn.sendall("Cache Miss".encode())
+                    conn.sendall("Cache Miss\n".encode())
                     print(f"Cache Miss: {file_num}번 파일 캐시에 없음, 데이터 서버로 요청")
                         
     conn.close()
