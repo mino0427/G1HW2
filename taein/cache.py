@@ -44,8 +44,8 @@ def send_file(conn, file_num, file_data, file_size_kb, speed_kbps, request_cnt, 
     global cache_size
 
     # 파일 전송 메시지 생성
-    header_message = f"FILE:{file_num}"
-    tail_message = f"{max_file_num}:{request_cnt}"
+    header_message = f"FILE:{file_num}:"
+    tail_message = f":{max_file_num}:{request_cnt}"
 
     full_message = header_message + file_data + tail_message +"\n"
     # 전송 시간 계산
@@ -61,25 +61,25 @@ def send_file(conn, file_num, file_data, file_size_kb, speed_kbps, request_cnt, 
         conn.sendall(chunk)
         sent_bytes += chunk_size
 
-    conn.sendall(f"MSG:파일 전송 완료 {file_size_kb} kb\n".encode())
+    #conn.sendall(f"MSG:파일 전송 완료 {file_size_kb} kb\n".encode())
     
     # request_cnt 감소 및 캐시 정리
-    with cache_lock:
-        if file_num in cache:
-            # 캐시에서 파일 데이터와 정보를 가져옴
-            file_data, file_size_kb, request_cnt = cache[file_num]
-            # request_cnt 값을 1 감소
-            request_cnt -= 1
-            print(f"파일 {file_num}의 request_cnt 감소: {request_cnt}")
+#    with cache_lock:########################################????????????????????????????????????????/
+    if file_num in cache:
+        # 캐시에서 파일 데이터와 정보를 가져옴
+        file_data, file_size_kb, request_cnt = cache[file_num]
+        # request_cnt 값을 1 감소
+        request_cnt -= 1
+        print(f"파일 {file_num}의 request_cnt 감소: {request_cnt}")
 
-            # request_cnt가 0이면 캐시에서 해당 파일 삭제
-            if request_cnt <= 0:
-                del cache[file_num]
-                cache_size -= file_size_kb
-                print(f"파일 {file_num}의 request_cnt가 0이 되어 캐시에서 제거되었습니다. 현재 캐시 사용량: {cache_size} KB")
-            else:
-                # request_cnt 업데이트
-                cache[file_num] = (file_data, file_size_kb, request_cnt)
+        # request_cnt가 0이면 캐시에서 해당 파일 삭제
+        if request_cnt <= 0:
+            del cache[file_num]
+            cache_size -= file_size_kb
+            print(f"파일 {file_num}의 request_cnt가 0이 되어 캐시에서 제거되었습니다. 현재 캐시 사용량: {cache_size} KB")
+        else:
+            # request_cnt 업데이트
+            cache[file_num] = (file_data, file_size_kb, request_cnt)
 
 # 데이터 서버에서 파일을 요청하는 함수
 def request_from_data_server(): ######################없어도 될거
@@ -251,7 +251,7 @@ def handle_client(conn, addr):
 
             # 캐시에 있는지 확인
                 with cache_lock:
-                    if False:#file_num in cache:
+                    if file_num in cache:
                         #캐시 히트
                         file_data, file_size_kb,request_cnt = cache[file_num]
                         conn.sendall("Cache Hit".encode())

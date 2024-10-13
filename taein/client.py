@@ -38,7 +38,7 @@ def receive_file(conn):
     if file_data.endswith(b'\n'):
         file_data = file_data[:-1]  # 마지막 "\n" 제거
 
-    print(f"수신된 데이터 크기: {len(file_data)} 바이트")
+
 
     # 수신된 파일 데이터를 문자열로 변환
     file_data_str = file_data.decode()
@@ -49,7 +49,7 @@ def receive_file(conn):
         if len(parts) == 5:  # FILE:file_num:file_data:Max:request_cnt 형식에 맞는지 확인
             _, file_num, file_data, max_file_num, request_cnt = parts
             print(f"파일 번호: {file_num}, Max 파일 번호: {max_file_num}, 요청 횟수: {request_cnt}")
-
+            print(f"파일 번호{file_num}, 파일 크기: {len(file_data)}")
             # 실제 파일 데이터 반환
             return file_data
 
