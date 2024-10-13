@@ -3,7 +3,7 @@ import threading
 import time
 
 HOST = '0.0.0.0'
-DATA_SERVER_HOST = '127.0.0.1'
+DATA_SERVER_HOST = '34.68.170.234'
 DATA_SERVER_PORT = 5000
 
 # 전송 속도 설정 (초당 전송되는 kb 수)
