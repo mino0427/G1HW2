@@ -110,7 +110,8 @@ def request_from_data_server():
                         
                         max_file_num = int(max_file_num)
                         Max = max_file_num
-                    
+
+                        
                     except Exception as e:
                         print(f"데이터 서버에서 파일 수신 중 오류")
                 
@@ -237,10 +238,9 @@ def handle_client(conn, addr):
     if FLAG == 1:
         print("데이터 서버에서 FLAG:1 수신. 파일 요청 시작.")
 
-        while FLAG:
+        while True:
             message = receive_data(conn)
-
-            
+           
             # 메시지와 파일, 요청 구분
             if message.startswith("REQUEST:"):
                 _, file_num = message.strip().split(":")
@@ -248,17 +248,17 @@ def handle_client(conn, addr):
                 print(f"클라이언트로부터 파일 {file_num} 요청 수신")
 
             # 캐시에 있는지 확인
-                with cache_lock:
-                    if file_num in cache:
-                        #캐시 히트
-                        file_data, request_cnt = cache[file_num]
-                        conn.sendall("Cache Hit".encode())
-                        send_file(conn, file_num,file_data, request_cnt,Max)
-                        print(f"Cache Hit: {file_num}번 파일 캐시에서 {CACHE_TO_CLIENT_SPEED}로 전송")
-                    else:
-                        # 캐시 미스
-                        conn.sendall("Cache Miss".encode())
-                        print(f"Cache Miss: {file_num}번 파일 캐시에 없음, 데이터 서버로 요청")
+                # with cache_lock:
+                if file_num in cache:
+                    #캐시 히트
+                    file_data, request_cnt = cache[file_num]
+                    conn.sendall("Cache Hit".encode())
+                    send_file(conn, file_num,file_data, request_cnt,Max)
+                    print(f"Cache Hit: {file_num}번 파일 캐시에서 {CACHE_TO_CLIENT_SPEED}로 전송")
+                else:
+                    # 캐시 미스
+                    conn.sendall("Cache Miss".encode())
+                    print(f"Cache Miss: {file_num}번 파일 캐시에 없음, 데이터 서버로 요청")
                         
     conn.close()
     print(f"클라이언트 연결 종료: {addr}")

@@ -13,7 +13,7 @@ buffer=''
 
 # 랜덤 리스트 생성
 def random_list():
-    random_list = random.sample(range(1, 10001), MAX_FILES)  # 1~10,000 중 1,000개 파일 선택
+    random_list = random.sample(range(1, 1001), MAX_FILES)  # 1~10,000 중 1,000개 파일 선택
     random_list.sort()  # 파일 리스트 정렬
     return random_list
 
