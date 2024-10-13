@@ -2,7 +2,7 @@ import socket
 import time
 import random
 
-DATA_SERVER_HOST = '127.0.0.1'
+DATA_SERVER_HOST = '34.68.170.234'
 DATA_SERVER_PORT = 5000
 MAX_FILES = 100  # 클라이언트가 수신할 파일 개수
 DOWNLOAD_SPEED_FROM_DATA_SERVER = 1000  # 데이터 서버에서 다운로드 속도 (1 Mbps = 1000 kb/s)

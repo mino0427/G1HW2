@@ -4,7 +4,7 @@ import time
 
 # 고유 포트는 운영체제에서 자동으로 할당받음
 HOST = '0.0.0.0'
-DATA_SERVER_HOST = '127.0.0.1'
+DATA_SERVER_HOST = '34.68.170.234'
 DATA_SERVER_PORT = 5000
 
 # 전송 속도 설정 (초당 전송되는 kb 수)
