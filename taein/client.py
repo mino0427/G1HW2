@@ -9,6 +9,8 @@ DOWNLOAD_SPEED_FROM_DATA_SERVER = 1000  # 데이터 서버에서 다운로드 �
 DOWNLOAD_SPEED_FROM_CACHE_SERVER = 3000  # 캐시 서버에서 다운로드 속도 (3 Mbps = 3000 kb/s)
 virtual_storage = {}  # 클라이언트가 받은 가상파일을 저장할 공간
 
+buffer=''
+
 # 랜덤 리스트 생성
 def random_list():
     random_list = random.sample(range(1, 10001), MAX_FILES)  # 1~10,000 중 1,000개 파일 선택
@@ -23,20 +25,31 @@ def send_random_list(data_server_conn, random_list):
     print(f"데이터 서버로 랜덤 리스트 전송: {random_msg}")
 
 # 파일 데이터 수신 함수 ("\n"으로 구분하여 청크 단위로 수신)
-def receive_file(conn):
-    file_data = b''  # 파일 데이터를 저장할 변수
+def receive_file(socket):
+    global buffer  # 전역 buffer 사용    
+    
     while True:
-        chunk = conn.recv(4096)  # 한 번에 최대 4096 바이트 수신
-        if not chunk:
-            break
+        try:
+            # buffer에 '\n'이 있으면, 메시지를 분리하여 반환
+            if '\n' in buffer:
+                message, buffer = buffer.split('\n', 1)
+                return message  # 메시지를 반환하고, 나머지는 buffer에 남겨 둠
 
-        file_data += chunk
-        if b'\n' in chunk:  # "\n"이 수신되면 데이터 끝으로 간주
-            break
+            # 새 데이터를 수신하여 buffer에 추가
+            chunk = socket.recv(4096).decode()
+            if not chunk:
+                break  # 연결 종료 시
 
-    # "\n" 제거
-    if file_data.endswith(b'\n'):
-        file_data = file_data[:-1]  # 마지막 "\n" 제거
+            buffer += chunk  # 새로 받은 데이터를 buffer에 추가
+
+            # buffer에 '\n'이 포함된 경우 메시지와 남은 데이터를 분리
+            if '\n' in buffer:
+                message, buffer = buffer.split('\n', 1)
+                return message  # 메시지를 반환하고, 나머지는 buffer에 남겨 둠
+
+        except Exception as e:
+            print(f"데이터 수신 중 오류 발생: {e}")
+            break
 
 
 
@@ -85,8 +98,8 @@ def request_cache(file_num, cache_conn):
         print(f"캐시 서버로 {file_num}번 파일 요청 중...")
 
         # 캐시 서버의 응답 수신
-        response = cache_conn.recv(4096).decode()
-        if response == "Cache Hit":
+        response = receive_file(cache_conn)
+        if response.startswith("Cache Hit"):
             print(f"캐시 히트 발생: {file_num}번 파일")
 
             # 데이터 수신 - FILE:file_num:file_data:Max:request_cnt 받음
@@ -95,7 +108,7 @@ def request_cache(file_num, cache_conn):
             print(f"캐시 서버에서 파일 수신 완료: {file_num}번 파일")
             return True  # 파일 수신 성공
         
-        elif response == "Cache Miss":
+        elif response.startswith("Cache Miss"):
             print(f"캐시 미스 발생: {file_num}번 파일")
             return False  # 캐시 미스 발생
         else:

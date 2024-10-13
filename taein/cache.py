@@ -16,7 +16,7 @@ Max = 0
 FLAG = 0  # 기본값 0, 데이터 서버에서 받은 FLAG에 따라 변경
 
 # 캐시 용량 제한 (25MB)
-CACHE_CAPACITY_KB = 25 * 1024  # 25MB를 KB로 변환
+CACHE_CAPACITY_KB = 200 * 1024  # 25MB를 KB로 변환
 
 cache = {}
 cache_size = 0  # 현재 캐시 사용량 (KB)
@@ -88,7 +88,6 @@ def request_from_data_server(): ######################없어도 될거
         while FLAG==0:
             try:
                 
-                file_size_kb = 25 * 1024  # 25MB를 KB로 변환
                 message = receive_data(data_server_socket)
             
                
@@ -116,7 +115,7 @@ def request_from_data_server(): ######################없어도 될거
                         
 
                         # 파일 크기를 실제로 계산
-                        file_size_kb = file_num*1024
+                        file_size_kb = file_num
                         Max = max_file_num
                     
                     except Exception as e:
@@ -174,7 +173,7 @@ def request_from_data_server(): ######################없어도 될거
                                         print(f"받은 파일 번호가 요청한 파일 번호와 다릅니다.")
                                         return None, None
 
-                                    file_size_kb = len(file_data) // 1024  # 바이트를 KB로 변환
+                                    file_size_kb = file_num  # 바이트를 KB로 변환
                                     Max = max_file_num
                             
                                 # 캐시 용량 검사 및 파일 저장
@@ -254,13 +253,13 @@ def handle_client(conn, addr):
                     if file_num in cache:
                         #캐시 히트
                         file_data, file_size_kb,request_cnt = cache[file_num]
-                        conn.sendall("Cache Hit".encode())
+                        conn.sendall("Cache Hit\n".encode())
                         file_size_kb = file_num*1024
                         send_file(conn, file_num,file_data, file_size_kb, CACHE_TO_CLIENT_SPEED,request_cnt,Max)
-                        print(f"Cache Hit: {file_num}번 파일 캐시에서 {CACHE_TO_CLIENT_SPEED}로 전송")
+                        print(f"Cache Hit: {file_num}번 파일 캐시에서 {CACHE_TO_CLIENT_SPEED}kbps로 전송")
                     else:
                         # 캐시 미스
-                        conn.sendall("Cache Miss".encode())
+                        conn.sendall("Cache Miss\n".encode())
                         print(f"Cache Miss: {file_num}번 파일 캐시에 없음, 데이터 서버로 요청")
                         
     conn.close()
