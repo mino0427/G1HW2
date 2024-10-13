@@ -113,7 +113,7 @@ def request_from_data_server():
                     
                     except Exception as e:
                         print(f"데이터 서버에서 파일 수신 중 오류")
-
+                
                 elif message.startswith("FLAG:"):
                     # 정확한 문자열 비교를 수행
                     _, flag_value = message.split(":")
@@ -121,13 +121,13 @@ def request_from_data_server():
                         FLAG = 1
                         print("FLAG 1을 수신했습니다.")
                         break
-                
+                    
                 if file_data:
                     with cache_lock:
                         cache[file_num] = (file_data, request_cnt)
                         cache_size += file_num
                         free_space = CACHE_CAPACITY_KB - cache_size
-                        print(f"cache_size: {cache_size}, 데이터 서버로 부터 받은 파일: {file_num}, 남은 공간: {free_space}")
+                        print(f"cache_size: {cache_size}, 데이터 서버로 부터 받은 파일: {file_num}, 남은 공간: {free_space}")                
 
             except Exception as e:
                 print(f"초기 데이터 수신 중 오류 발생: {e}")
@@ -221,49 +221,43 @@ def receive_data(socket):
 
 def handle_client(conn, addr):
     global FLAG
-    if FLAG==1:
-        print(f"연결된 클라이언트: {addr}")
-
-    # data = receive_data(data_server_socket)
-    # message = data.decode(errors='ignore')
-    # if message.startswith("FLAG:"):
-    #                 # 정확한 문자열 비교를 수행
-    #     _, flag_value = message.split(":")
-    #     if flag_value.strip() == "1":
-    #         FLAG = 1
-    #         print("FLAG 1을 수신했습니다.")
+    print(f"연결된 클라이언트: {addr}")
+    ###############################FLAG가 0인 경우 그냥 이 부분을 넘어가버림#############수정필요################
+    # FLAG = receive_data(data_server_socket)## 내가 수정한 부분
     
-
     # 데이터를 수신하여 FLAG 값을 확인
-        while True:
-        
-            print("데이터 서버에서 FLAG:1 수신. 파일 요청 시작.")
+    while True:
+        if FLAG==1:
+            break
 
-            while True:
-                message = receive_data(conn)
+    if FLAG == 1:
+        print("데이터 서버에서 FLAG:1 수신. 파일 요청 시작.")
 
-                
-                # 메시지와 파일, 요청 구분
-                if message.startswith("REQUEST:"):
-                    _, file_num = message.strip().split(":")
-                    file_num = int(file_num)
-                    print(f"클라이언트로부터 파일 {file_num} 요청 수신")
+        while FLAG:
+            message = receive_data(conn)
 
-                # 캐시에 있는지 확인
-                    with cache_lock:
-                        if file_num in cache():
-                            #캐시 히트
-                            file_data, request_cnt = cache[file_num]
-                            conn.sendall("Cache Hit".encode())
-                            send_file(conn, file_num, file_data, max_file_num, request_cnt)
-                            print(f"Cache Hit: {file_num}번 파일 캐시에서 전송")
-                        else:
-                            # 캐시 미스
-                            conn.sendall("Cache Miss".encode())
-                            print(f"Cache Miss: {file_num}번 파일 캐시에 없음, 데이터 서버로 요청")
+            
+            # 메시지와 파일, 요청 구분
+            if message.startswith("REQUEST:"):
+                _, file_num = message.strip().split(":")
+                file_num = int(file_num)
+                print(f"클라이언트로부터 파일 {file_num} 요청 수신")
+
+            # 캐시에 있는지 확인
+                with cache_lock:
+                    if file_num in cache:
+                        #캐시 히트
+                        file_data, request_cnt = cache[file_num]
+                        conn.sendall("Cache Hit".encode())
+                        send_file(conn, file_num,file_data, request_cnt,Max)
+                        print(f"Cache Hit: {file_num}번 파일 캐시에서 {CACHE_TO_CLIENT_SPEED}로 전송")
+                    else:
+                        # 캐시 미스
+                        conn.sendall("Cache Miss".encode())
+                        print(f"Cache Miss: {file_num}번 파일 캐시에 없음, 데이터 서버로 요청")
                         
-    # conn.close()
-    # print(f"클라이언트 연결 종료: {addr}")
+    conn.close()
+    print(f"클라이언트 연결 종료: {addr}")
 
 # 데이터 서버 연결 종료 함수
 def close_data_server_connection():
