@@ -40,6 +40,8 @@ def find_next_file_num(conn):#캐시가 받아야할 다음 파일 정보를 알
     global Max
     global cache_servers
     
+
+    
     while FLAG:
         # 값이 0보다 큰 것들 중 가장 작은 짝수 index 찾기
         if cache_servers[0][2] == conn:
@@ -58,6 +60,8 @@ def find_next_file_num(conn):#캐시가 받아야할 다음 파일 정보를 알
 
 def identify_connection(conn):
     global cache_servers
+    
+
     
     # cache_servers 리스트에서 conn이 있는지 확인
     for cache_server in cache_servers:
@@ -80,6 +84,7 @@ def send_file(conn, file_num, file_size_kb, speed_kbps):
     global processed_file
     global data_array
     global Max
+
     
     # 캐시, 클라이언트에 따라 data_array 업데이트 하기
     node = identify_connection(conn)
@@ -193,7 +198,7 @@ def set_cache(): #홀짝캐시에게 25MB만큼의 데이터 전송하기
 # 데이터를 청크 단위로 받는 함수
 def receive_data(socket):
     global buffer  # 전역 buffer 사용
-    
+
     
     while True:
         try:
@@ -234,13 +239,14 @@ def request_processing(conn, addr):
             # 데이터를 청크 단위로 수신
             message = receive_data(conn)
            
-            if not message :
-                break  # 연결이 종료되면 루프 탈출
 
             # '\n'이 메시지의 끝을 의미하므로 이를 기준으로 메시지 처리
             
             # 요청 메시지 형식 구분: REQUEST로 시작하는 파일 요청
-            if message.startswith("REQUEST:"):
+            if not message:
+                continue
+            
+            elif message.startswith("REQUEST:"):
                 _, file_num_str = message.split(":")  # "REQUEST:file_num" 형식
                 file_num = int(file_num_str)
                 print(f"데이터 서버: {addr}로부터 {file_num}번 파일 요청 수신")
@@ -276,6 +282,7 @@ def request_processing(conn, addr):
                     set_cache()
                     send_flag_to_all()
 
+             
                     
             else:
                 print(f"잘못된 요청 형식 수신: {message}")
