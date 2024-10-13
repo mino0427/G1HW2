@@ -247,19 +247,19 @@ def handle_client(conn, addr):
                 _, file_num = message.strip().split(":")
                 file_num = int(file_num)
                 print(f"클라이언트로부터 파일 {file_num} 요청 수신")
-
+            
             # 캐시에 있는지 확인
-                # with cache_lock:
-                if file_num in cache:
-                    #캐시 히트
-                    file_data, request_cnt = cache[file_num]
-                    conn.sendall("Cache Hit\n".encode())
-                    send_file(conn, file_num,file_data, request_cnt,Max)
-                    print(f"Cache Hit: {file_num}번 파일 캐시에서 {CACHE_TO_CLIENT_SPEED}로 전송")
-                else:
-                    # 캐시 미스
-                    conn.sendall("Cache Miss\n".encode())
-                    print(f"Cache Miss: {file_num}번 파일 캐시에 없음, 데이터 서버로 요청")
+            if file_num in cache:
+                #캐시 히트
+                file_data, request_cnt = cache[file_num]
+                conn.sendall("Cache Hit\n".encode())
+                send_file(conn, file_num,file_data, request_cnt,Max)
+                print(f"Cache Hit: {file_num}번 파일 캐시에서 {CACHE_TO_CLIENT_SPEED}로 전송")
+            else:
+                # 캐시 미스
+                conn.sendall("Cache Miss\n".encode())
+                print(f"Cache Miss: {file_num}번 파일 캐시에 없음, 데이터 서버로 요청")
+
                         
     conn.close()
     print(f"클라이언트 연결 종료: {addr}")

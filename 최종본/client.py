@@ -2,7 +2,7 @@ import socket
 import time
 import random
 
-DATA_SERVER_HOST = '127.0.0.1'
+DATA_SERVER_HOST = '34.68.170.234'
 DATA_SERVER_PORT = 5000
 MAX_FILES = 100  # 클라이언트가 수신할 파일 개수
 DOWNLOAD_SPEED_FROM_DATA_SERVER = 1000  # 데이터 서버에서 다운로드 속도 (1 Mbps = 1000 kb/s)
@@ -50,7 +50,6 @@ def receive_file(socket):
         except Exception as e:
             print(f"데이터 수신 중 오류 발생: {e}")
             break
-
 
 
     # 수신된 파일 데이터를 문자열로 변환
@@ -166,11 +165,9 @@ def start_client():
     cache_conns = []
     for cache_host, cache_port in cache_servers:
         cache_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        cache_conn.connect((cache_host, cache_port))  # IP와 포트로 캐시 서버 연결
+        cache_conn.connect(('127.0.0.1', cache_port))  # IP와 포트로 캐시 서버 연결
         cache_conns.append(cache_conn)
-        print(f"캐시 서버 {cache_host}:{cache_port}에 연결 유지")
-
-
+        print(f"캐시 서버 {'127.0.0.1'}:{cache_port}에 연결 유지")
 
     file_request_list = random_list() #랜덤 리스트 생성
     send_random_list(data_server_conn, file_request_list) #랜덤 리스트 데이터 서버에 전송
@@ -185,7 +182,7 @@ def start_client():
         #     # 데이터, 캐시 서버와 연결 유지
 
         while file_request_list:
-            if random.random() < 0.1:  # 20% 확률
+            if random.random() < 0:  # 0% 확률
                 file_num = file_request_list.pop(-1)  # 리스트에서 가장 큰 파일
                 print(f"20% 확률로 가장 큰 파일 {file_num} 요청 중...")
             else:
@@ -196,6 +193,7 @@ def start_client():
             request_file(file_num, cache_conns, data_server_conn)
 
         print("모든파일 수신 완료")
+
         #Gracefully Termination
         for cache_conn in cache_conns:
             cache_conn.close()  # 캐시 서버와의 연결 종료

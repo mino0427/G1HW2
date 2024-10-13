@@ -116,9 +116,9 @@
 	source myenv/bin/activate //가상환경 활성화
 
 ⑥ UPLOAD FILE을 클릭하여 server.py를 업로드한다.
-	server.py가 업로드된 디렉터리에서 python3 server.py로 Data server를 실행한다.
+	server.py가 업로드된 디렉터리에서 python3 data.py로 Data server를 실행한다.
 
-⑦ 로컬에서 powershell 터미널 6개를 열어 터미널 2개는 python3 cache.py로 캐시 서버를 실행시키고, 나머지 터미널 4개는 python3 client.py로 client를 실행한다.
+⑦ 로컬에서 powershell 터미널 6개를 열어 터미널 2개는 python3 cache.py로 캐시 서버를 실행시키고, 나머지 터미널 4개는 python3 client.py로 client를 실행한다. (vscode에서 실행해도 됨)
 	
 ⑧ 2개의 Cache server와 4개의 client가 모두 연결되면 프로그램이 실행된다.
 

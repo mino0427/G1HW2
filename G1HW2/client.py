@@ -52,7 +52,6 @@ def receive_file(socket):
             break
 
 
-
     # 수신된 파일 데이터를 문자열로 변환
     file_data_str = file_data.decode()
 
@@ -166,11 +165,9 @@ def start_client():
     cache_conns = []
     for cache_host, cache_port in cache_servers:
         cache_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        cache_conn.connect((cache_host, cache_port))  # IP와 포트로 캐시 서버 연결
+        cache_conn.connect(('127.0.0.1', cache_port))  # IP와 포트로 캐시 서버 연결
         cache_conns.append(cache_conn)
-        print(f"캐시 서버 {cache_host}:{cache_port}에 연결 유지")
-
-
+        print(f"캐시 서버 {'127.0.0.1'}:{cache_port}에 연결 유지")
 
     file_request_list = random_list() #랜덤 리스트 생성
     send_random_list(data_server_conn, file_request_list) #랜덤 리스트 데이터 서버에 전송
@@ -196,6 +193,7 @@ def start_client():
             request_file(file_num, cache_conns, data_server_conn)
 
         print("모든파일 수신 완료")
+
         #Gracefully Termination
         for cache_conn in cache_conns:
             cache_conn.close()  # 캐시 서버와의 연결 종료
