@@ -193,8 +193,6 @@ def set_cache(): #홀짝캐시에게 25MB만큼의 데이터 전송하기
 # 데이터를 청크 단위로 받는 함수
 def receive_data(socket):
     global buffer  # 전역 buffer 사용
-
-    print(identify_connection(socket))
     
     
     while True:
@@ -273,7 +271,6 @@ def request_processing(conn, addr):
                     data_array[file_num] += 1  # 파일 번호에 해당하는 요청 횟수 증가
                     processed_file += 1
 
-                print(processed_file)
                 
                 if processed_file == 400:
                     set_cache()
