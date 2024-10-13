@@ -2,9 +2,9 @@
 
 20203043 권수현 - client 코드 작성, 디버깅, 서버 알고리즘 구상, Readme 작성
 
-20203058 남태인 - 전체 코드 점검, data server 코드 작성, 디버깅, 서버 알고리즘 구상, Readme 작성
+20203058 남태인 - 전체 코드 점검, data server 코드 작성, 디버깅, 서버 알고리즘 구상, Readme 작성, 발표
 
-20203072 안민호 – cache server 코드 작성, 디버깅, 서버 알고리즘 구상, Readme 작성
+20203072 안민호 – cache server 코드 작성, 디버깅, 서버 알고리즘 구상, Readme 작성, 로그 추가, AllDefinedLogs.txt 작성
 
 
 
