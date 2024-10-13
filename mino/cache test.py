@@ -26,7 +26,6 @@ free_space = 0
 data_server_socket = None
 data_server_lock = threading.Lock()
 
-
 buffer=''#버퍼 역할을 한다
 
 def connect_to_data_server(host, port):
@@ -220,20 +219,21 @@ def receive_data(socket):
             break
 
 
-def handle_client(conn, addr, max_file_num):
+def handle_client(conn, addr):
     global FLAG
-    print(f"연결된 클라이언트: {addr}")
-
-    data = receive_data(data_server_socket)## 내가 수정한 부분
-    message = data.decode(errors='ignore')
-    if message.startswith("FLAG:"):
-                    # 정확한 문자열 비교를 수행
-        _, flag_value = message.split(":")
-        if flag_value.strip() == "1":
-            FLAG = 1
-            print("FLAG 1을 수신했습니다.")
-    
     if FLAG==1:
+        print(f"연결된 클라이언트: {addr}")
+
+    # data = receive_data(data_server_socket)
+    # message = data.decode(errors='ignore')
+    # if message.startswith("FLAG:"):
+    #                 # 정확한 문자열 비교를 수행
+    #     _, flag_value = message.split(":")
+    #     if flag_value.strip() == "1":
+    #         FLAG = 1
+    #         print("FLAG 1을 수신했습니다.")
+    
+
     # 데이터를 수신하여 FLAG 값을 확인
         while True:
         
